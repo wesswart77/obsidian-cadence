@@ -48,26 +48,26 @@
 
 /* ─────────── Cadence-app dark mode (fallback, theme-agnostic) ─────────── */
 .cadence-app.cad-dark {
-  background: #15191A; color: #D8D5CB;
+  background: #1e1e1e; color: #b3b3b3;
 }
-.cadence-app.cad-dark .cad-app-content { background: #15191A; }
-.cadence-app.cad-dark .cad-app-topbar  { background: #181D1F; border-bottom-color: #2F3438; }
-.cadence-app.cad-dark .cad-app-nav     { background: #181D1F; border-right-color: #2F3438; }
-.cadence-app.cad-dark .cad-app-brand-text { color: #F2F0EA; }
-.cadence-app.cad-dark .cad-app-topbar-meta { color: #6F7672; }
-.cadence-app.cad-dark .cad-app-nav-item        { color: #D8D5CB; }
-.cadence-app.cad-dark .cad-app-nav-item:hover  { background: #232A2D; }
+.cadence-app.cad-dark .cad-app-content { background: #1e1e1e; }
+.cadence-app.cad-dark .cad-app-topbar  { background: #161616; border-bottom-color: #303030; }
+.cadence-app.cad-dark .cad-app-nav     { background: #161616; border-right-color: #303030; }
+.cadence-app.cad-dark .cad-app-brand-text { color: #dcddde; }
+.cadence-app.cad-dark .cad-app-topbar-meta { color: #6f6f6f; }
+.cadence-app.cad-dark .cad-app-nav-item        { color: #b3b3b3; }
+.cadence-app.cad-dark .cad-app-nav-item:hover  { background: #2a2a2a; }
 .cadence-app.cad-dark .cad-app-nav-item.active { background: oklch(0.22 0.05 155); color: oklch(0.78 0.13 155); }
-.cadence-app.cad-dark .cad-app-nav-icon        { color: #A6ADAA; }
+.cadence-app.cad-dark .cad-app-nav-icon        { color: #999999; }
 .cadence-app.cad-dark .cad-app-nav-item.active .cad-app-nav-icon { color: oklch(0.78 0.13 155); }
-.cadence-app.cad-dark .cad-nav-group-head      { color: #6F7672; }
+.cadence-app.cad-dark .cad-nav-group-head      { color: #6f6f6f; }
 
 /* Page header + section labels */
-.cadence-app.cad-dark .cad-page-header     { background: #181D1F; border-bottom-color: #2F3438; }
-.cadence-app.cad-dark .cad-page-title      { color: #F2F0EA; }
-.cadence-app.cad-dark .cad-page-subtitle   { color: #A6ADAA; }
-.cadence-app.cad-dark .cad-eyebrow         { color: #6F7672; }
-.cadence-app.cad-dark .cad-section-label-lg { color: #6F7672; }
+.cadence-app.cad-dark .cad-page-header     { background: #161616; border-bottom-color: #303030; }
+.cadence-app.cad-dark .cad-page-title      { color: #dcddde; }
+.cadence-app.cad-dark .cad-page-subtitle   { color: #999999; }
+.cadence-app.cad-dark .cad-eyebrow         { color: #6f6f6f; }
+.cadence-app.cad-dark .cad-section-label-lg { color: #6f6f6f; }
 
 /* Cards / surfaces */
 .cadence-app.cad-dark .cad-stat-card,
@@ -79,7 +79,7 @@
 .cadence-app.cad-dark .cad-table-wrap,
 .cadence-app.cad-dark .cad-dash-row,
 .cadence-app.cad-dark .cad-kanban-card,
-.cadence-app.cad-dark .cad-inbox-row { background: #1E2225; border-color: #2F3438; }
+.cadence-app.cad-dark .cad-inbox-row { background: #262626; border-color: #303030; }
 
 .cadence-app.cad-dark .cad-stat-value,
 .cadence-app.cad-dark .cad-stat-label,
@@ -90,42 +90,42 @@
 .cadence-app.cad-dark .cad-inbox-row-text,
 .cadence-app.cad-dark .cad-table tbody td,
 .cadence-app.cad-dark .cad-row-primary,
-.cadence-app.cad-dark .cad-proj-title { color: #F2F0EA; }
-.cadence-app.cad-dark .cad-stat-label { color: #6F7672; }
-.cadence-app.cad-dark .cad-stat-sub   { color: #6F7672; }
+.cadence-app.cad-dark .cad-proj-title { color: #dcddde; }
+.cadence-app.cad-dark .cad-stat-label { color: #6f6f6f; }
+.cadence-app.cad-dark .cad-stat-sub   { color: #6f6f6f; }
 .cadence-app.cad-dark .cad-home-row-meta,
 .cadence-app.cad-dark .cad-pt-group-meta,
 .cadence-app.cad-dark .cad-dash-row-meta,
-.cadence-app.cad-dark .cad-inbox-row-notes { color: #A6ADAA; }
+.cadence-app.cad-dark .cad-inbox-row-notes { color: #999999; }
 
 /* Card heads recess */
 .cadence-app.cad-dark .cad-home-card-head,
 .cadence-app.cad-dark .cad-pd-card-head,
 .cadence-app.cad-dark .cad-dash-card-head,
 .cadence-app.cad-dark .cad-pt-group-head,
-.cadence-app.cad-dark .cad-table thead th { background: #181D1F; border-bottom-color: #2F3438; color: #6F7672; }
+.cadence-app.cad-dark .cad-table thead th { background: #161616; border-bottom-color: #303030; color: #6f6f6f; }
 
 /* Kanban */
-.cadence-app.cad-dark .cad-kanban-col { background: #181D1F; border-color: #2F3438; }
-.cadence-app.cad-dark .cad-kanban-card { background: #232A2D; border-color: #2F3438; }
-.cadence-app.cad-dark .cad-kanban-col-title { color: #F2F0EA; }
-.cadence-app.cad-dark .cad-kanban-col-meta  { color: #6F7672; }
-.cadence-app.cad-dark .cad-kanban-card-title { color: #F2F0EA; }
-.cadence-app.cad-dark .cad-kanban-card-meta  { color: #A6ADAA; }
-.cadence-app.cad-dark .cad-kanban-col-list .cad-empty { color: #6F7672; }
+.cadence-app.cad-dark .cad-kanban-col { background: #161616; border-color: #303030; }
+.cadence-app.cad-dark .cad-kanban-card { background: #2a2a2a; border-color: #303030; }
+.cadence-app.cad-dark .cad-kanban-col-title { color: #dcddde; }
+.cadence-app.cad-dark .cad-kanban-col-meta  { color: #6f6f6f; }
+.cadence-app.cad-dark .cad-kanban-card-title { color: #dcddde; }
+.cadence-app.cad-dark .cad-kanban-card-meta  { color: #999999; }
+.cadence-app.cad-dark .cad-kanban-col-list .cad-empty { color: #6f6f6f; }
 
 /* Inputs */
 .cadence-app.cad-dark .cad-pd-meta-input,
 .cadence-app.cad-dark .cad-pd-textarea,
 .cadence-app.cad-dark .cad-mile-notes-textarea,
-.cadence-app.cad-dark .cad-create-input { background: #15191A; color: #F2F0EA; border-color: #2F3438; }
+.cadence-app.cad-dark .cad-create-input { background: #1e1e1e; color: #dcddde; border-color: #303030; }
 .cadence-app.cad-dark .cad-pd-mile-date,
 .cadence-app.cad-dark .cad-pd-mile-title,
-.cadence-app.cad-dark .cad-pd-task-title { color: #F2F0EA; }
+.cadence-app.cad-dark .cad-pd-task-title { color: #dcddde; }
 
 /* Buttons (default) */
-.cadence-app.cad-dark .cad-btn { background: #2A2F32; color: #F2F0EA; border-color: #3A4042; }
-.cadence-app.cad-dark .cad-btn:hover { background: #34393C; }
+.cadence-app.cad-dark .cad-btn { background: #303030; color: #dcddde; border-color: #3a3a3a; }
+.cadence-app.cad-dark .cad-btn:hover { background: #3a3a3a; }
 
 /* Hover row backgrounds */
 .cadence-app.cad-dark .cad-table tbody tr:hover,
@@ -134,31 +134,31 @@
 .cadence-app.cad-dark .cad-pt-row:hover,
 .cadence-app.cad-dark .cad-pd-mile-row:hover,
 .cadence-app.cad-dark .cad-pd-task-row:hover,
-.cadence-app.cad-dark .cad-mile-notes-preview:hover { background: #232A2D; }
+.cadence-app.cad-dark .cad-mile-notes-preview:hover { background: #2a2a2a; }
 
 /* Mini-stats */
-.cadence-app.cad-dark .cad-mini-stat + .cad-mini-stat { border-left-color: #2F3438; }
-.cadence-app.cad-dark .cad-mini-stat-value { color: #F2F0EA; }
-.cadence-app.cad-dark .cad-mini-stat-label { color: #6F7672; }
-.cadence-app.cad-dark .cad-mini-stat:hover { background: #232A2D; }
+.cadence-app.cad-dark .cad-mini-stat + .cad-mini-stat { border-left-color: #303030; }
+.cadence-app.cad-dark .cad-mini-stat-value { color: #dcddde; }
+.cadence-app.cad-dark .cad-mini-stat-label { color: #6f6f6f; }
+.cadence-app.cad-dark .cad-mini-stat:hover { background: #2a2a2a; }
 
 /* Stage bars + progress bar tracks */
-.cadence-app.cad-dark .cad-stage-bar { background: #2A2F32; }
-.cadence-app.cad-dark .cad-stage-bar-name  { color: #F2F0EA; }
+.cadence-app.cad-dark .cad-stage-bar { background: #303030; }
+.cadence-app.cad-dark .cad-stage-bar-name  { color: #dcddde; }
 .cadence-app.cad-dark .cad-stage-bar-count,
-.cadence-app.cad-dark .cad-stage-bar-value { color: #A6ADAA; }
-.cadence-app.cad-dark .cad-proj-progress-bar { background: #2A2F32; }
-.cadence-app.cad-dark .cad-proj-progress-label { color: #6F7672; }
-.cadence-app.cad-dark .cad-proj-progress-pct { color: #F2F0EA; }
-.cadence-app.cad-dark .cad-bar[data-band="empty"] { background: #2A2F32; }
+.cadence-app.cad-dark .cad-stage-bar-value { color: #999999; }
+.cadence-app.cad-dark .cad-proj-progress-bar { background: #303030; }
+.cadence-app.cad-dark .cad-proj-progress-label { color: #6f6f6f; }
+.cadence-app.cad-dark .cad-proj-progress-pct { color: #dcddde; }
+.cadence-app.cad-dark .cad-bar[data-band="empty"] { background: #303030; }
 
 /* Inbox overdue */
 .cadence-app.cad-dark .cad-inbox-row.overdue {
-  background: color-mix(in oklch, oklch(0.65 0.14 25) 12%, #1E2225);
+  background: color-mix(in oklch, oklch(0.65 0.14 25) 12%, #262626);
   border-color: oklch(0.65 0.14 25);
 }
-.cadence-app.cad-dark .cad-inbox-time-text         { color: #F2F0EA; }
-.cadence-app.cad-dark .cad-inbox-time-text.muted   { color: #6F7672; }
+.cadence-app.cad-dark .cad-inbox-time-text         { color: #dcddde; }
+.cadence-app.cad-dark .cad-inbox-time-text.muted   { color: #6f6f6f; }
 .cadence-app.cad-dark .cad-inbox-row.overdue .cad-inbox-time-text { color: oklch(0.75 0.16 25); }
 
 /* Project chip */
@@ -169,13 +169,52 @@
 }
 
 /* Empty state copy */
-.cadence-app.cad-dark .cad-empty-state-title { color: #D8D5CB; }
+.cadence-app.cad-dark .cad-empty-state-title { color: #b3b3b3; }
 .cadence-app.cad-dark .cad-empty-state-desc,
-.cadence-app.cad-dark .cad-empty { color: #6F7672; }
+.cadence-app.cad-dark .cad-empty { color: #6f6f6f; }
 
 /* Topbar icon button hover */
-.cadence-app.cad-dark .cad-topbar-icon-btn { color: #A6ADAA; }
-.cadence-app.cad-dark .cad-topbar-icon-btn:hover { background: #232A2D; color: #F2F0EA; }
+.cadence-app.cad-dark .cad-topbar-icon-btn { color: #999999; }
+.cadence-app.cad-dark .cad-topbar-icon-btn:hover { background: #2a2a2a; color: #dcddde; }
+
+/* When Obsidian is *also* in dark mode, inherit its actual surface colors
+   so Cadence dark blends seamlessly with whichever Obsidian dark theme is active.
+   When Obsidian is in light mode, the explicit dark values above kick in. */
+body.theme-dark .cadence-app.cad-dark,
+body.theme-dark .cadence-app.cad-dark .cad-app-content { background: var(--background-primary); }
+body.theme-dark .cadence-app.cad-dark .cad-app-topbar,
+body.theme-dark .cadence-app.cad-dark .cad-app-nav,
+body.theme-dark .cadence-app.cad-dark .cad-page-header,
+body.theme-dark .cadence-app.cad-dark .cad-home-card-head,
+body.theme-dark .cadence-app.cad-dark .cad-pd-card-head,
+body.theme-dark .cadence-app.cad-dark .cad-dash-card-head,
+body.theme-dark .cadence-app.cad-dark .cad-pt-group-head,
+body.theme-dark .cadence-app.cad-dark .cad-table thead th,
+body.theme-dark .cadence-app.cad-dark .cad-kanban-col {
+  background: var(--background-secondary);
+  border-color: var(--background-modifier-border);
+}
+body.theme-dark .cadence-app.cad-dark .cad-stat-card,
+body.theme-dark .cadence-app.cad-dark .cad-home-card,
+body.theme-dark .cadence-app.cad-dark .cad-pd-card,
+body.theme-dark .cadence-app.cad-dark .cad-dash-card,
+body.theme-dark .cadence-app.cad-dark .cad-pt-group,
+body.theme-dark .cadence-app.cad-dark .cad-proj-card,
+body.theme-dark .cadence-app.cad-dark .cad-table-wrap,
+body.theme-dark .cadence-app.cad-dark .cad-dash-row,
+body.theme-dark .cadence-app.cad-dark .cad-kanban-card,
+body.theme-dark .cadence-app.cad-dark .cad-inbox-row,
+body.theme-dark .cadence-app.cad-dark .cad-pd-meta-input,
+body.theme-dark .cadence-app.cad-dark .cad-pd-textarea,
+body.theme-dark .cadence-app.cad-dark .cad-mile-notes-textarea,
+body.theme-dark .cadence-app.cad-dark .cad-create-input {
+  background: var(--background-primary);
+  border-color: var(--background-modifier-border);
+}
+body.theme-dark .cadence-app.cad-dark .cad-btn {
+  background: var(--background-modifier-border);
+  border-color: var(--background-modifier-border-hover, var(--background-modifier-border));
+}
 
 .cad-app-body {
   display: flex;
