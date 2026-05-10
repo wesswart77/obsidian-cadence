@@ -263,6 +263,7 @@ const DEFAULT_SETTINGS = {
   openOnStartup: false,
   collapsedGroups: {}, // { [groupId]: true }
   currency: 'USD',
+  cadenceAppDark: false,
   modules: { crm: true, prm: true, planner: true },
   desktopNotifications: false,
   reminders: [], // [{ id, text, when (ISO|null), repeat ('none'|'daily'|'weekly'), notified, done, createdAt }]
@@ -1549,26 +1550,12 @@ class CadenceAppView extends obsidian.ItemView {
     return SURFACE_BY_ID[id] ? id : 'home';
   }
 
-  /* Toggle Obsidian's light/dark mode. Tries the (undocumented but stable)
-     app.changeTheme API first, falls back to body class + vault config. */
-  _toggleObsidianMode() {
-    const isDark = document.body.classList.contains('theme-dark');
-    const next = isDark ? 'moonstone' : 'obsidian';
-    try {
-      if (typeof this.app.changeTheme === 'function') {
-        this.app.changeTheme(next);
-      } else {
-        document.body.classList.toggle('theme-dark', !isDark);
-        document.body.classList.toggle('theme-light', isDark);
-        if (this.app.vault.setConfig) this.app.vault.setConfig('theme', next);
-        if (this.app.workspace.trigger) this.app.workspace.trigger('css-change');
-      }
-    } catch (e) {
-      new obsidian.Notice('Theme toggle failed: ' + (e && e.message || e));
-      return;
-    }
-    // Re-render so the icon flips
-    setTimeout(() => this.render(), 80);
+  /* Toggle Cadence-app dark mode. Scoped to `.cadence-app` only —
+     does not affect Obsidian's overall light/dark mode. Persisted in settings. */
+  async _toggleCadenceDark() {
+    this.plugin.settings.cadenceAppDark = !this.plugin.settings.cadenceAppDark;
+    await this.plugin.saveSettings();
+    this.render();
   }
 
   _visibleNavGroups() {
@@ -1655,6 +1642,7 @@ class CadenceAppView extends obsidian.ItemView {
     const root = this.containerEl.children[1];
     root.empty();
     root.addClass('cadence-app');
+    root.toggleClass('cad-dark', !!this.plugin.settings.cadenceAppDark);
 
     const active = SURFACE_BY_ID[this.mode] || SURFACE_BY_ID['planner.today'];
 
@@ -1666,12 +1654,12 @@ class CadenceAppView extends obsidian.ItemView {
 
     const topRight = topbar.createDiv({ cls: 'cad-app-topbar-right' });
 
-    /* Dark/light toggle */
-    const isDark = document.body.classList.contains('theme-dark');
+    /* Cadence-app dark mode toggle (scoped — does NOT touch Obsidian's mode) */
+    const dark = !!this.plugin.settings.cadenceAppDark;
     const themeBtn = topRight.createEl('button', { cls: 'cad-topbar-icon-btn' });
-    try { obsidian.setIcon(themeBtn, isDark ? 'sun' : 'moon'); } catch (_) {}
-    themeBtn.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
-    themeBtn.addEventListener('click', () => this._toggleObsidianMode());
+    try { obsidian.setIcon(themeBtn, dark ? 'sun' : 'moon'); } catch (_) {}
+    themeBtn.title = dark ? 'Cadence: switch to light' : 'Cadence: switch to dark';
+    themeBtn.addEventListener('click', () => this._toggleCadenceDark());
 
     const eyebrow = topRight.createDiv({ cls: 'cad-app-topbar-meta' });
     eyebrow.setText(active.label.toUpperCase());
