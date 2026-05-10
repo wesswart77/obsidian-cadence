@@ -33,6 +33,18 @@
   font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--text-muted);
 }
+.cad-app-topbar-right { display: flex; align-items: center; gap: 12px; }
+.cad-topbar-icon-btn {
+  background: transparent; border: 0;
+  padding: 6px;
+  cursor: pointer;
+  color: var(--text-muted);
+  border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.cad-topbar-icon-btn:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.cad-topbar-icon-btn svg { width: 16px; height: 16px; }
 
 .cad-app-body {
   display: flex;

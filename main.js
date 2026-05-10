@@ -1549,6 +1549,28 @@ class CadenceAppView extends obsidian.ItemView {
     return SURFACE_BY_ID[id] ? id : 'home';
   }
 
+  /* Toggle Obsidian's light/dark mode. Tries the (undocumented but stable)
+     app.changeTheme API first, falls back to body class + vault config. */
+  _toggleObsidianMode() {
+    const isDark = document.body.classList.contains('theme-dark');
+    const next = isDark ? 'moonstone' : 'obsidian';
+    try {
+      if (typeof this.app.changeTheme === 'function') {
+        this.app.changeTheme(next);
+      } else {
+        document.body.classList.toggle('theme-dark', !isDark);
+        document.body.classList.toggle('theme-light', isDark);
+        if (this.app.vault.setConfig) this.app.vault.setConfig('theme', next);
+        if (this.app.workspace.trigger) this.app.workspace.trigger('css-change');
+      }
+    } catch (e) {
+      new obsidian.Notice('Theme toggle failed: ' + (e && e.message || e));
+      return;
+    }
+    // Re-render so the icon flips
+    setTimeout(() => this.render(), 80);
+  }
+
   _visibleNavGroups() {
     const mods = this.plugin.settings.modules || { crm: true, prm: true, planner: true };
     return NAV_GROUPS
@@ -1641,7 +1663,17 @@ class CadenceAppView extends obsidian.ItemView {
     const brand = topbar.createDiv({ cls: 'cad-app-brand' });
     brand.createSpan({ cls: 'cad-app-brand-mark', text: '◐' });
     brand.createSpan({ cls: 'cad-app-brand-text', text: 'Cadence' });
-    const eyebrow = topbar.createDiv({ cls: 'cad-app-topbar-meta' });
+
+    const topRight = topbar.createDiv({ cls: 'cad-app-topbar-right' });
+
+    /* Dark/light toggle */
+    const isDark = document.body.classList.contains('theme-dark');
+    const themeBtn = topRight.createEl('button', { cls: 'cad-topbar-icon-btn' });
+    try { obsidian.setIcon(themeBtn, isDark ? 'sun' : 'moon'); } catch (_) {}
+    themeBtn.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+    themeBtn.addEventListener('click', () => this._toggleObsidianMode());
+
+    const eyebrow = topRight.createDiv({ cls: 'cad-app-topbar-meta' });
     eyebrow.setText(active.label.toUpperCase());
 
     /* ── Body: left grouped nav + main content ──────── */
