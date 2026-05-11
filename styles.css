@@ -119,9 +119,34 @@
 .cadence-app.cad-dark .cad-pd-textarea,
 .cadence-app.cad-dark .cad-mile-notes-textarea,
 .cadence-app.cad-dark .cad-create-input { background: #1e1e1e; color: #dcddde; border-color: #303030; }
+.cadence-app.cad-dark .cad-pd-meta-input::placeholder,
+.cadence-app.cad-dark .cad-pd-textarea::placeholder,
+.cadence-app.cad-dark .cad-mile-notes-textarea::placeholder,
+.cadence-app.cad-dark .cad-create-input::placeholder,
+.cadence-app.cad-dark .cad-pd-mile-title::placeholder,
+.cadence-app.cad-dark .cad-pd-task-title::placeholder { color: #6f6f6f; }
+
+/* Milestone + task inline inputs — override all states with explicit
+   dark backgrounds, !important to defeat the base #ffffff hover/focus rules. */
 .cadence-app.cad-dark .cad-pd-mile-date,
 .cadence-app.cad-dark .cad-pd-mile-title,
-.cadence-app.cad-dark .cad-pd-task-title { color: #dcddde; }
+.cadence-app.cad-dark .cad-pd-task-title {
+  background: #1e1e1e !important;
+  color: #dcddde !important;
+  border-color: #303030 !important;
+}
+.cadence-app.cad-dark .cad-pd-mile-date:hover,
+.cadence-app.cad-dark .cad-pd-mile-title:hover,
+.cadence-app.cad-dark .cad-pd-task-title:hover {
+  background: #262626 !important; border-color: #3a3a3a !important; color: #dcddde !important;
+}
+.cadence-app.cad-dark .cad-pd-mile-date:focus,
+.cadence-app.cad-dark .cad-pd-mile-title:focus,
+.cadence-app.cad-dark .cad-pd-task-title:focus {
+  background: #262626 !important;
+  border-color: var(--interactive-accent, #5cb85c) !important;
+  color: #dcddde !important;
+}
 
 /* Buttons (default) */
 .cadence-app.cad-dark .cad-btn { background: #303030; color: #dcddde; border-color: #3a3a3a; }
@@ -177,11 +202,10 @@
 .cadence-app.cad-dark .cad-topbar-icon-btn { color: #999999; }
 .cadence-app.cad-dark .cad-topbar-icon-btn:hover { background: #2a2a2a; color: #dcddde; }
 
-/* When Obsidian is *also* in dark mode, inherit its actual surface colors
-   so Cadence dark blends seamlessly with whichever Obsidian dark theme is active.
-   When Obsidian is in light mode, the explicit dark values above kick in. */
+/* When Obsidian is *also* in dark mode, sit Cadence on the same main-pane
+   surface — body, nav, topbar all on --background-primary (the darkest). */
 body.theme-dark .cadence-app.cad-dark,
-body.theme-dark .cadence-app.cad-dark .cad-app-content { background: var(--background-primary); }
+body.theme-dark .cadence-app.cad-dark .cad-app-content,
 body.theme-dark .cadence-app.cad-dark .cad-app-topbar,
 body.theme-dark .cadence-app.cad-dark .cad-app-nav,
 body.theme-dark .cadence-app.cad-dark .cad-page-header,
@@ -191,7 +215,7 @@ body.theme-dark .cadence-app.cad-dark .cad-dash-card-head,
 body.theme-dark .cadence-app.cad-dark .cad-pt-group-head,
 body.theme-dark .cadence-app.cad-dark .cad-table thead th,
 body.theme-dark .cadence-app.cad-dark .cad-kanban-col {
-  background: var(--background-secondary);
+  background: var(--background-primary);
   border-color: var(--background-modifier-border);
 }
 body.theme-dark .cadence-app.cad-dark .cad-stat-card,
@@ -203,7 +227,10 @@ body.theme-dark .cadence-app.cad-dark .cad-proj-card,
 body.theme-dark .cadence-app.cad-dark .cad-table-wrap,
 body.theme-dark .cadence-app.cad-dark .cad-dash-row,
 body.theme-dark .cadence-app.cad-dark .cad-kanban-card,
-body.theme-dark .cadence-app.cad-dark .cad-inbox-row,
+body.theme-dark .cadence-app.cad-dark .cad-inbox-row {
+  background: var(--background-primary-alt);
+  border-color: var(--background-modifier-border);
+}
 body.theme-dark .cadence-app.cad-dark .cad-pd-meta-input,
 body.theme-dark .cadence-app.cad-dark .cad-pd-textarea,
 body.theme-dark .cadence-app.cad-dark .cad-mile-notes-textarea,
@@ -212,8 +239,11 @@ body.theme-dark .cadence-app.cad-dark .cad-create-input {
   border-color: var(--background-modifier-border);
 }
 body.theme-dark .cadence-app.cad-dark .cad-btn {
-  background: var(--background-modifier-border);
-  border-color: var(--background-modifier-border-hover, var(--background-modifier-border));
+  background: var(--background-primary-alt);
+  border-color: var(--background-modifier-border);
+}
+body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
+  background: var(--background-modifier-hover);
 }
 
 .cad-app-body {
@@ -818,6 +848,7 @@ select.cad-create-input { appearance: auto; padding-right: 28px; }
   margin-top: 22px; padding-top: 18px;
   border-top: 1px solid var(--background-modifier-border);
 }
+.cad-rem-project-field { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 /* Import modal — fallback */
 .cad-import-modal { min-width: 700px; max-width: 880px; }
@@ -1295,6 +1326,40 @@ select.cad-form-input { appearance: auto; padding-right: 28px; }
   color: var(--text-faint);
   text-decoration: line-through;
 }
+
+/* Task → project link (fallback) */
+.cad-task-text { flex: 1; min-width: 0; }
+.cad-task-row, .cad-home-task { gap: 8px; }
+.cad-task-row .cad-task-link-btn,
+.cad-home-task .cad-task-link-btn {
+  background: transparent; border: 0;
+  padding: 2px 6px; margin-left: auto;
+  cursor: pointer; color: var(--text-faint);
+  font-size: 12px; line-height: 1; border-radius: 4px;
+  opacity: 0; transition: opacity 100ms ease, color 100ms ease, background 100ms ease;
+}
+.cad-task-row:hover .cad-task-link-btn,
+.cad-home-task:hover .cad-task-link-btn { opacity: 1; }
+.cad-task-row .cad-task-link-btn.linked,
+.cad-home-task .cad-task-link-btn.linked { opacity: 1; color: var(--interactive-accent); }
+.cad-task-row .cad-task-link-btn:hover,
+.cad-home-task .cad-task-link-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+.cad-task-proj-chip {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--interactive-accent);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  text-decoration: none; cursor: pointer;
+  flex-shrink: 0;
+}
+.cad-task-proj-chip:hover { background: var(--background-modifier-hover); }
 .cadence-today .cad-task-row input[type="checkbox"] {
   margin: 0;
   cursor: pointer;

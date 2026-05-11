@@ -264,6 +264,7 @@ const DEFAULT_SETTINGS = {
   collapsedGroups: {}, // { [groupId]: true }
   currency: 'USD',
   cadenceAppDark: false,
+  taskProjectLinks: {}, // { "dailyPath::taskText": "Cadence/Projects/X.md" }
   modules: { crm: true, prm: true, planner: true },
   desktopNotifications: false,
   reminders: [], // [{ id, text, when (ISO|null), repeat ('none'|'daily'|'weekly'), notified, done, createdAt }]
@@ -866,28 +867,6 @@ class CadenceReminderEditModal extends obsidian.Modal {
     contentEl.addClass('cad-reminder-edit-modal');
     contentEl.createEl('h3', { cls: 'cad-create-title', text: this.isNew ? 'New reminder' : 'Edit reminder' });
 
-    /* Linked project chip (read-only, shown only if set) */
-    if (this.reminder.project) {
-      const link = contentEl.createDiv({ cls: 'cad-rem-project-chip-row' });
-      const chip = link.createEl('a', { cls: 'cad-rem-project-chip', text: '📁 ' + (projectNameFromPath(this.app, this.reminder.project) || this.reminder.project) });
-      chip.title = 'Open project';
-      chip.addEventListener('click', (e) => {
-        e.preventDefault();
-        const file = this.app.vault.getAbstractFileByPath(this.reminder.project);
-        if (file && file instanceof obsidian.TFile) {
-          // Close modal then open detail
-          this._submitted = true;
-          this.close();
-          const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP)[0];
-          if (leaf && leaf.view && typeof leaf.view.openEntityDetail === 'function') {
-            leaf.view.openEntityDetail('project', file);
-          } else {
-            this.app.workspace.openLinkText(this.reminder.project, '', false);
-          }
-        }
-      });
-    }
-
     const form = contentEl.createDiv({ cls: 'cad-create-form' });
 
     /* Text */
@@ -923,6 +902,44 @@ class CadenceReminderEditModal extends obsidian.Modal {
       const o = repeatSel.createEl('option', { value: v, text: l });
       if (v === (this.reminder.repeat || 'none')) o.selected = true;
     });
+
+    /* Project link */
+    const projectRow = form.createDiv({ cls: 'cad-create-row' });
+    projectRow.createDiv({ cls: 'cad-create-label', text: 'PROJECT' });
+    const projectField = projectRow.createDiv({ cls: 'cad-rem-project-field' });
+    const renderProjectField = () => {
+      projectField.empty();
+      if (this.reminder.project) {
+        const chip = projectField.createEl('a', { cls: 'cad-rem-project-chip', text: '📁 ' + (projectNameFromPath(this.app, this.reminder.project) || 'Project') });
+        chip.title = 'Open project (closes this modal)';
+        chip.addEventListener('click', (e) => {
+          e.preventDefault();
+          const file = this.app.vault.getAbstractFileByPath(this.reminder.project);
+          if (file && file instanceof obsidian.TFile) {
+            this._submitted = true;
+            this.close();
+            const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP)[0];
+            if (leaf && leaf.view && typeof leaf.view.openEntityDetail === 'function') {
+              leaf.view.openEntityDetail('project', file);
+            }
+          }
+        });
+        const changeBtn = projectField.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Change' });
+        changeBtn.type = 'button';
+        changeBtn.addEventListener('click', () => this._openReminderProjectPicker(renderProjectField));
+        const removeBtn = projectField.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: 'Remove' });
+        removeBtn.type = 'button';
+        removeBtn.addEventListener('click', () => {
+          this.reminder.project = null;
+          renderProjectField();
+        });
+      } else {
+        const linkBtn = projectField.createEl('button', { cls: 'cad-btn cad-btn-sm', text: '📁 Link to project' });
+        linkBtn.type = 'button';
+        linkBtn.addEventListener('click', () => this._openReminderProjectPicker(renderProjectField));
+      }
+    };
+    renderProjectField();
 
     /* Notes */
     const notesRow = form.createDiv({ cls: 'cad-create-row' });
@@ -961,6 +978,7 @@ class CadenceReminderEditModal extends obsidian.Modal {
         text,
         notes: notesArea.value,
         repeat: repeatSel.value || 'none',
+        project: this.reminder.project || null,
       };
       if (dateInput.value) {
         const d = fromLocalDatetimeValue(dateInput.value);
@@ -973,7 +991,7 @@ class CadenceReminderEditModal extends obsidian.Modal {
         fields.notified = false;
       }
       if (this.isNew) {
-        await this.plugin.addReminder(Object.assign({}, fields, { project: this.reminder.project || null }));
+        await this.plugin.addReminder(fields);
         new obsidian.Notice(fields.when
           ? `Reminder set · ${reminderTimeStr(fields.when)}`
           : 'Captured to Inbox');
@@ -999,6 +1017,34 @@ class CadenceReminderEditModal extends obsidian.Modal {
   }
 
   onClose() { this.contentEl.empty(); }
+
+  _openReminderProjectPicker(rerender) {
+    const projectFiles = (this.app.vault.getMarkdownFiles ? this.app.vault.getMarkdownFiles() : [])
+      .filter((f) => f.path.startsWith(ENTITIES.project.folder + '/'));
+    if (!projectFiles.length) {
+      new obsidian.Notice('No projects yet. Create one in Planner → Projects first.');
+      return;
+    }
+    const projects = projectFiles.map((f) => ({ file: f, name: projectNameFromPath(this.app, f.path) }));
+    const reminder = this.reminder;
+    const picker = new (class extends obsidian.SuggestModal {
+      constructor(app, projs) {
+        super(app);
+        this.projs = projs;
+        this.setPlaceholder('Search projects to link this reminder to…');
+      }
+      getSuggestions(query) {
+        const q = (query || '').toLowerCase();
+        return this.projs.filter((p) => p.name.toLowerCase().includes(q));
+      }
+      renderSuggestion(item, el) { el.setText('📁  ' + item.name); }
+      onChooseSuggestion(item) {
+        reminder.project = item.file.path;
+        rerender();
+      }
+    })(this.app, projects);
+    picker.open();
+  }
 }
 
 /* ─────────── CSV parser (handles quoted fields, escaped quotes, newlines) ─────────── */
@@ -1568,6 +1614,69 @@ class CadenceAppView extends obsidian.ItemView {
         return Object.assign({}, g, { items });
       })
       .filter(Boolean);
+  }
+
+  /* Link a daily-note task to a project. Keyed by (dailyPath, taskText). */
+  _taskLinkKey(dailyPath, text) { return `${dailyPath}::${(text || '').trim()}`; }
+
+  _getTaskProjectLink(dailyPath, text) {
+    const map = (this.plugin.settings && this.plugin.settings.taskProjectLinks) || {};
+    return map[this._taskLinkKey(dailyPath, text)] || null;
+  }
+
+  async _setTaskProjectLink(dailyPath, text, projectPath) {
+    if (!this.plugin.settings.taskProjectLinks) this.plugin.settings.taskProjectLinks = {};
+    const key = this._taskLinkKey(dailyPath, text);
+    if (projectPath) {
+      this.plugin.settings.taskProjectLinks[key] = projectPath;
+    } else {
+      delete this.plugin.settings.taskProjectLinks[key];
+    }
+    await this.plugin.saveSettings();
+    this.render();
+  }
+
+  _openTaskProjectPicker(dailyPath, text, currentLink) {
+    const projectFiles = listEntityFiles(this.app, 'project');
+    if (!projectFiles.length) {
+      new obsidian.Notice('No projects yet. Create one in Planner → Projects first.');
+      return;
+    }
+    const view = this;
+    const projects = projectFiles.map((f) => ({
+      file: f,
+      name: projectNameFromPath(this.app, f.path),
+    }));
+
+    const picker = new (class extends obsidian.SuggestModal {
+      constructor(app, projs, hasLink) {
+        super(app);
+        this.projs = projs;
+        this.hasLink = hasLink;
+        this.setPlaceholder(hasLink ? 'Pick a project (or type "unlink" to remove)' : 'Pick a project to link this task to');
+      }
+      getSuggestions(query) {
+        const q = (query || '').toLowerCase();
+        const matches = this.projs.filter((p) => p.name.toLowerCase().includes(q));
+        if (this.hasLink && (q === '' || 'unlink'.includes(q))) {
+          return [{ unlink: true, name: '— Remove link —' }, ...matches];
+        }
+        return matches;
+      }
+      renderSuggestion(item, el) {
+        if (item.unlink) {
+          el.setText(item.name);
+          el.style.color = 'var(--text-error, #c0392b)';
+        } else {
+          el.setText('📁  ' + item.name);
+        }
+      }
+      onChooseSuggestion(item) {
+        if (item.unlink) view._setTaskProjectLink(dailyPath, text, null);
+        else view._setTaskProjectLink(dailyPath, text, item.file.path);
+      }
+    })(this.app, projects, !!currentLink);
+    picker.open();
   }
 
   _inboxOverdueCount() {
@@ -2584,7 +2693,27 @@ class CadenceAppView extends obsidian.ItemView {
           await this._propagateTaskComplete(taskText, cb.checked, { kind: 'daily', file, date: new Date() });
         }
       });
-      row.createSpan({ text });
+      row.createSpan({ cls: 'cad-task-text', text });
+
+      /* Project link button + chip */
+      const dailyPath = file.path;
+      const linkedProject = this._getTaskProjectLink(dailyPath, text);
+      if (linkedProject) {
+        const chip = row.createEl('a', { cls: 'cad-task-proj-chip', text: '📁 ' + (projectNameFromPath(this.app, linkedProject) || 'Project') });
+        chip.title = 'Open linked project';
+        chip.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          const f = this.app.vault.getAbstractFileByPath(linkedProject);
+          if (f && f instanceof obsidian.TFile) this.openEntityDetail('project', f);
+        });
+      }
+      const linkBtn = row.createEl('button', { cls: 'cad-task-link-btn' + (linkedProject ? ' linked' : ''), text: linkedProject ? '✎' : '📁' });
+      linkBtn.title = linkedProject ? 'Change linked project' : 'Link to a project';
+      linkBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        this._openTaskProjectPicker(dailyPath, text, linkedProject);
+      });
     });
   }
 
@@ -4082,6 +4211,7 @@ class CadenceAppView extends obsidian.ItemView {
     if (!this.todayParsed.tasks.length) {
       taskSection.createDiv({ cls: 'cad-empty', text: 'No tasks in today\'s note yet.' });
     } else {
+      const dailyPath = this.todayFile.path;
       this.todayParsed.tasks.forEach((rawLine, idx) => {
         const checked = / \[(x|X)\] /.test(rawLine);
         const text = rawLine.replace(/^\s*-\s\[(x|X| )\]\s/, '');
@@ -4089,7 +4219,26 @@ class CadenceAppView extends obsidian.ItemView {
         const cb = row.createEl('input', { type: 'checkbox' });
         cb.checked = checked;
         cb.addEventListener('change', () => this.toggleTodayTask(idx, cb.checked));
-        row.createSpan({ text });
+        row.createSpan({ cls: 'cad-task-text', text });
+
+        /* Project link — chip if linked, then a button */
+        const linkedProject = this._getTaskProjectLink(dailyPath, text);
+        if (linkedProject) {
+          const chip = row.createEl('a', { cls: 'cad-task-proj-chip', text: '📁 ' + (projectNameFromPath(this.app, linkedProject) || 'Project') });
+          chip.title = 'Open linked project';
+          chip.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            const file = this.app.vault.getAbstractFileByPath(linkedProject);
+            if (file && file instanceof obsidian.TFile) this.openEntityDetail('project', file);
+          });
+        }
+        const linkBtn = row.createEl('button', { cls: 'cad-task-link-btn' + (linkedProject ? ' linked' : ''), text: linkedProject ? '✎' : '📁' });
+        linkBtn.title = linkedProject ? 'Change linked project' : 'Link to a project';
+        linkBtn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          this._openTaskProjectPicker(dailyPath, text, linkedProject);
+        });
       });
     }
 
