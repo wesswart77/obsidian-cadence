@@ -172,6 +172,16 @@ PRs welcome. For bug reports, please include your Obsidian version, OS, and a mi
 
 ---
 
+## Support
+
+If Cadence saves you time or makes your day a bit smoother, a coffee keeps the dev nights going. ☕
+
+<a href="https://www.buymeacoffee.com/wesswart77" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="50"></a>
+
+Or via the heart icon next to Cadence in Obsidian's community plugin browser once you have it installed.
+
+---
+
 ## License
 
 [MIT](LICENSE) © Wesley Swart
