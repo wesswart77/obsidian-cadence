@@ -1,10 +1,11 @@
 {
   "id": "cadence-planner",
   "name": "Cadence",
-  "version": "0.13.9",
+  "version": "0.13.10",
   "minAppVersion": "1.4.0",
   "description": "A workspace for working life: Home command centre, CRM, PRM, Planner with reminders, rich projects, Reports, and CSV import. Markdown source-of-truth, no server required.",
   "author": "wesswart77",
   "authorUrl": "https://github.com/wesswart77",
+  "fundingUrl": "https://www.buymeacoffee.com/wesswart77",
   "isDesktopOnly": false
 }
