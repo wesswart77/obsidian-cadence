@@ -126,26 +126,27 @@
 .cadence-app.cad-dark .cad-pd-mile-title::placeholder,
 .cadence-app.cad-dark .cad-pd-task-title::placeholder { color: #6f6f6f; }
 
-/* Milestone + task inline inputs — override all states with explicit
-   dark backgrounds, !important to defeat the base #ffffff hover/focus rules. */
+/* Milestone + task inline inputs — explicit dark backgrounds for every state.
+   Selector specificity (3 classes + pseudo) already outranks the base rules
+   (1 class + pseudo), so no !important is needed. */
 .cadence-app.cad-dark .cad-pd-mile-date,
 .cadence-app.cad-dark .cad-pd-mile-title,
 .cadence-app.cad-dark .cad-pd-task-title {
-  background: #1e1e1e !important;
-  color: #dcddde !important;
-  border-color: #303030 !important;
+  background: #1e1e1e;
+  color: #dcddde;
+  border-color: #303030;
 }
 .cadence-app.cad-dark .cad-pd-mile-date:hover,
 .cadence-app.cad-dark .cad-pd-mile-title:hover,
 .cadence-app.cad-dark .cad-pd-task-title:hover {
-  background: #262626 !important; border-color: #3a3a3a !important; color: #dcddde !important;
+  background: #262626; border-color: #3a3a3a; color: #dcddde;
 }
 .cadence-app.cad-dark .cad-pd-mile-date:focus,
 .cadence-app.cad-dark .cad-pd-mile-title:focus,
 .cadence-app.cad-dark .cad-pd-task-title:focus {
-  background: #262626 !important;
-  border-color: var(--interactive-accent, #5cb85c) !important;
-  color: #dcddde !important;
+  background: #262626;
+  border-color: var(--interactive-accent, #5cb85c);
+  color: #dcddde;
 }
 
 /* Buttons (default) */
@@ -462,6 +463,7 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   border-radius: 10px;
   display: flex; flex-direction: column;
   max-height: calc(100vh - 250px);
+  transition: background 90ms ease, border-color 90ms ease;
 }
 .cad-kanban-col-head {
   padding: 12px; border-bottom: 1px solid var(--background-modifier-border);
@@ -477,6 +479,7 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
 .cad-kanban-col-list {
   padding: 8px; display: flex; flex-direction: column; gap: 6px;
   overflow-y: auto;
+  min-height: 60px;
 }
 .cad-kanban-card {
   background: var(--background-primary);
@@ -492,15 +495,9 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
 }
 .cad-kanban-card:active { cursor: grabbing; }
 .cad-kanban-card.dragging { opacity: 0.4; transform: rotate(-1deg); }
-.cad-kanban-col {
-  transition: background 90ms ease, border-color 90ms ease;
-}
 .cad-kanban-col.drag-over {
   background: var(--background-modifier-active-hover, var(--background-modifier-hover));
   border-color: var(--interactive-accent);
-}
-.cad-kanban-col-list {
-  min-height: 60px;
 }
 .cad-kanban-card-title {
   font-size: 13px; font-weight: 500; color: var(--text-normal);
@@ -882,7 +879,9 @@ select.cad-create-input { appearance: auto; padding-right: 28px; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 200px;
 }
-.cad-import-select { padding: 4px 26px 4px 8px !important; font-size: 12px !important; }
+/* Higher specificity (two classes on the same element) so we override
+   .cad-create-input padding without !important. */
+.cad-create-input.cad-import-select { padding: 4px 26px 4px 8px; font-size: 12px; }
 .cad-import-summary {
   margin-top: 14px; padding: 10px 12px; font-size: 13px;
   background: var(--background-secondary); color: var(--text-muted);
@@ -1034,10 +1033,11 @@ select.cad-form-input { appearance: auto; padding-right: 28px; }
   padding: 18px 12px; font-size: 13px; color: var(--text-faint); text-align: center;
 }
 
-.cad-mini-stat-row {
+/* Chained class to outrank .cad-dash-card-body padding without !important. */
+.cad-dash-card-body.cad-mini-stat-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  gap: 0; padding: 14px 0 !important;
+  gap: 0; padding: 14px 0;
 }
 .cad-mini-stat { text-align: center; padding: 6px 12px; cursor: pointer; }
 .cad-mini-stat + .cad-mini-stat { border-left: 1px solid var(--background-modifier-border); }
