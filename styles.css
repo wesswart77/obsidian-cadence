@@ -520,6 +520,54 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
   font-size: 13px; color: var(--text-faint); max-width: 480px; margin: 0 auto;
 }
 
+/* ─────────── Top of the Day — daily briefing (fallback) ─────────── */
+.cad-briefing {
+  margin: 20px 32px 0 32px;
+  padding: 18px 22px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 14px;
+}
+.cad-briefing-head { margin-bottom: 12px; }
+.cad-briefing-eyebrow {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--interactive-accent);
+  margin-bottom: 4px;
+}
+.cad-briefing-headline {
+  font-size: 16px; font-weight: 600; color: var(--text-normal);
+  letter-spacing: -0.01em; line-height: 1.4;
+}
+.cad-briefing-list { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+.cad-briefing-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 10px; border-radius: 7px;
+  font-size: 14px; color: var(--text-normal);
+  border-left: 3px solid var(--background-modifier-border);
+  transition: background 100ms ease, transform 90ms ease;
+}
+.cad-briefing-row.clickable { cursor: pointer; }
+.cad-briefing-row.clickable:hover {
+  background: var(--background-modifier-hover); transform: translateX(2px);
+}
+.cad-briefing-icon { font-size: 16px; flex-shrink: 0; line-height: 1; }
+.cad-briefing-text { flex: 1; min-width: 0; }
+
+.cad-briefing-row.cad-tone-emerald { border-left-color: oklch(0.55 0.13 155); }
+.cad-briefing-row.cad-tone-mint    { border-left-color: oklch(0.78 0.12 155); }
+.cad-briefing-row.cad-tone-sky     { border-left-color: oklch(0.65 0.10 230); }
+.cad-briefing-row.cad-tone-warn    { border-left-color: oklch(0.72 0.14 70); }
+.cad-briefing-row.cad-tone-rose    { border-left-color: oklch(0.65 0.14 25); }
+
+.cad-briefing-empty {
+  padding: 8px 0 4px 0; font-size: 13px;
+  color: var(--text-muted); font-style: italic;
+}
+.cadence-app.cad-dark .cad-briefing { background: #1E2225; border-color: #303030; }
+.cadence-app.cad-dark .cad-briefing-headline { color: #F2F0EA; }
+.cadence-app.cad-dark .cad-briefing-row { color: #D8D5CB; }
+.cadence-app.cad-dark .cad-briefing-row.clickable:hover { background: #262626; }
+
 /* ─────────── Home / Command Centre ─────────── */
 .cadence-home .cad-home-cols {
   display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
