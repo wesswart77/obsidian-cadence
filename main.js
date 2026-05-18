@@ -2655,7 +2655,7 @@ class CadenceAppView extends obsidian.ItemView {
 
   /* ── Top of the day — assistant-style daily briefing ── */
   async _renderBriefing(root) {
-    const items = await this._computeBriefing();
+    let items = await this._computeBriefing();
     const card = root.createDiv({ cls: 'cad-briefing' });
 
     const head = card.createDiv({ cls: 'cad-briefing-head' });
@@ -2667,6 +2667,13 @@ class CadenceAppView extends obsidian.ItemView {
       return;
     }
 
+    // On mobile, trim to the top 3 most urgent. _computeBriefing already
+    // emits items in priority order (overdue → time → opportunity → wins),
+    // so a simple slice keeps what matters most.
+    const isMobile = !!(obsidian.Platform && obsidian.Platform.isMobile);
+    const hiddenCount = isMobile && items.length > 3 ? items.length - 3 : 0;
+    if (isMobile && items.length > 3) items = items.slice(0, 3);
+
     const list = card.createDiv({ cls: 'cad-briefing-list' });
     items.forEach((it) => {
       const row = list.createDiv({ cls: `cad-briefing-row cad-tone-${it.tone || 'emerald'}` });
@@ -2677,6 +2684,10 @@ class CadenceAppView extends obsidian.ItemView {
         row.addEventListener('click', it.action);
       }
     });
+    if (hiddenCount > 0) {
+      const more = card.createDiv({ cls: 'cad-briefing-more' });
+      more.setText(`+${hiddenCount} more · scroll down for the full picture`);
+    }
   }
 
   _briefingHeadline(items) {

@@ -1731,3 +1731,24 @@ select.cad-form-input { appearance: auto; padding-right: 28px; }
   .cad-task-link-btn,
   .cad-home-task .cad-task-link-btn { opacity: 1 !important; }
 }
+
+/* iOS safe-area insets */
+@media (max-width: 760px) {
+  .cad-app-topbar {
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  .cad-app-content { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+  .cad-app-nav {
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}
+
+.cad-briefing-more {
+  margin-top: 10px; padding: 6px 10px 0 10px;
+  font-size: 11px; font-weight: 600;
+  color: var(--text-muted); text-align: center;
+  border-top: 1px dashed var(--background-modifier-border);
+}
