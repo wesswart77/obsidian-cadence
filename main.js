@@ -3417,9 +3417,9 @@ class CadenceAppView extends obsidian.ItemView {
       if (!items.length) {
         list.createDiv({ cls: 'cad-empty', text: '—' });
       } else {
+        const isMobile = !!(obsidian.Platform && obsidian.Platform.isMobile);
         items.forEach((e) => {
           const card = list.createDiv({ cls: 'cad-kanban-card' });
-          card.draggable = true;
           card.dataset.path = e.file.path;
           card.createDiv({ cls: 'cad-kanban-card-title', text: entityValue(e, 'title', def) || e.basename });
           const meta = card.createDiv({ cls: 'cad-kanban-card-meta' });
@@ -3428,17 +3428,26 @@ class CadenceAppView extends obsidian.ItemView {
           const co = entityValue(e, 'company', def);
           if (co) meta.createSpan({ cls: 'cad-kanban-card-company', text: ' · ' + co });
 
-          card.addEventListener('dragstart', (ev) => {
-            card.addClass('dragging');
-            try {
-              ev.dataTransfer.effectAllowed = 'move';
-              ev.dataTransfer.setData('text/cadence-entity', e.file.path);
-              ev.dataTransfer.setData('text/cadence-stage', stage);
-              // Plain text payload too, so dropping into editors yields a link
-              ev.dataTransfer.setData('text/plain', `[[${e.file.basename}]]`);
-            } catch (_) {}
-          });
-          card.addEventListener('dragend', () => card.removeClass('dragging'));
+          /* Drag-to-move is a desktop-only affordance. On mobile, HTML5 drag
+             doesn't reliably fire from touch and the `draggable` attribute
+             can interfere with native scrolling. Mobile users instead tap
+             the card to open detail, then change the stage from there. */
+          if (!isMobile) {
+            card.draggable = true;
+            card.addEventListener('dragstart', (ev) => {
+              card.addClass('dragging');
+              try {
+                ev.dataTransfer.effectAllowed = 'move';
+                ev.dataTransfer.setData('text/cadence-entity', e.file.path);
+                ev.dataTransfer.setData('text/cadence-stage', stage);
+                // Plain text payload too, so dropping into editors yields a link
+                ev.dataTransfer.setData('text/plain', `[[${e.file.basename}]]`);
+              } catch (_) {}
+            });
+            card.addEventListener('dragend', () => card.removeClass('dragging'));
+          } else {
+            card.addClass('cad-kanban-card-touch');
+          }
           card.addEventListener('click', () => this.openEntityDetail(entityKey, e.file));
         });
       }

@@ -495,6 +495,9 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
 }
 .cad-kanban-card:active { cursor: grabbing; }
 .cad-kanban-card.dragging { opacity: 0.4; transform: rotate(-1deg); }
+.cad-kanban-card.cad-kanban-card-touch,
+.cad-kanban-card.cad-kanban-card-touch:active { cursor: pointer; }
+.cad-kanban-card.cad-kanban-card-touch:hover { transform: none; }
 .cad-kanban-col.drag-over {
   background: var(--background-modifier-active-hover, var(--background-modifier-hover));
   border-color: var(--interactive-accent);
