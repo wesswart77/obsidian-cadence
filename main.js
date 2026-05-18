@@ -353,11 +353,25 @@ function ensureFolderSync(app, path) {
   return Promise.all(promises);
 }
 
+/* List markdown files inside an entity's folder, without enumerating the
+   whole vault. Walks the specific folder tree only (recursively, in case
+   the user organises into sub-folders). */
 function listEntityFiles(app, entityKey) {
   const def = ENTITIES[entityKey];
   if (!def) return [];
-  const folder = def.folder;
-  return app.vault.getMarkdownFiles().filter((f) => f.path.startsWith(folder + '/'));
+  const root = app.vault.getAbstractFileByPath(def.folder);
+  if (!root || !root.children) return [];
+  const out = [];
+  const walk = (node) => {
+    for (const child of node.children) {
+      if (child.children) walk(child);
+      else if (typeof child.path === 'string' && child.path.toLowerCase().endsWith('.md')) {
+        out.push(child);
+      }
+    }
+  };
+  walk(root);
+  return out;
 }
 
 function readEntity(app, file) {
@@ -1019,8 +1033,8 @@ class CadenceReminderEditModal extends obsidian.Modal {
   onClose() { this.contentEl.empty(); }
 
   _openReminderProjectPicker(rerender) {
-    const projectFiles = (this.app.vault.getMarkdownFiles ? this.app.vault.getMarkdownFiles() : [])
-      .filter((f) => f.path.startsWith(ENTITIES.project.folder + '/'));
+    // Use the scoped listEntityFiles helper rather than enumerating the whole vault.
+    const projectFiles = listEntityFiles(this.app, 'project');
     if (!projectFiles.length) {
       new obsidian.Notice('No projects yet. Create one in Planner → Projects first.');
       return;
@@ -1148,6 +1162,9 @@ class CadenceImportModal extends obsidian.Modal {
 
     pasteBtn.addEventListener('click', () => ta.focus());
     fileBtn.addEventListener('click', async () => {
+      // Intentional vault-wide enumeration: the user is explicitly picking a
+      // .csv file they've placed somewhere in their vault. Limiting this
+      // would defeat the feature. All other entity reads are folder-scoped.
       const csvFiles = this.app.vault.getFiles().filter((f) => f.path.toLowerCase().endsWith('.csv'));
       if (!csvFiles.length) {
         new obsidian.Notice('No .csv files found in vault. Drop one in the vault first.');

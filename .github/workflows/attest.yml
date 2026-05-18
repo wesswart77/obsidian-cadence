@@ -1,0 +1,32 @@
+name: Attest release assets
+
+# Whenever a release is published, generate GitHub artifact attestations for
+# the three release assets. Attestations are cryptographic claims that these
+# files were built from this repo at this commit. The Obsidian community
+# plugin portal surfaces this as a verified-provenance signal.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  attest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source at release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Generate artifact attestations
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: |
+            ./main.js
+            ./styles.css
+            ./manifest.json
