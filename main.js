@@ -24,8 +24,8 @@ const NAV_GROUPS = [
   {
     id: 'planner', label: 'Planner', module: 'planner',
     items: [
-      { id: 'planner.inbox',    label: 'Inbox',    icon: 'inbox',         module: 'planner', desc: 'Universal capture + reminders. Anything you toss in here surfaces at the right time.' },
-      { id: 'planner.today',    label: 'Today',    icon: 'sun',           module: 'planner', desc: 'Diary view of today\'s daily note.' },
+      { id: 'planner.inbox', label: 'Inbox', icon: 'inbox', module: 'planner', desc: 'Universal capture + reminders. Anything you toss in here surfaces at the right time.' },
+      { id: 'planner.today', label: 'Today', icon: 'sun', module: 'planner', desc: 'Diary view of today\'s daily note.' },
       { id: 'planner.calendar', label: 'Calendar', icon: 'calendar-days', module: 'planner', desc: 'Week view across daily notes.' },
       { id: 'planner.projects', label: 'Projects', icon: 'folder-kanban', module: 'planner', desc: 'Active projects with milestones, owners, statuses — kanban over project notes.' },
     ],
@@ -33,22 +33,22 @@ const NAV_GROUPS = [
   {
     id: 'crm', label: 'CRM', module: 'crm',
     items: [
-      { id: 'crm.dashboard',  label: 'Dashboard',  icon: 'layout-grid',     module: 'crm', desc: 'Overview cards — today\'s tasks, deal momentum, recent contacts, week stats.' },
-      { id: 'crm.pipeline',   label: 'Pipeline',   icon: 'trending-up',     module: 'crm', desc: 'Sales pipeline. Deals as markdown notes with stage, value and contact frontmatter.' },
-      { id: 'crm.contacts',   label: 'Contacts',   icon: 'users',           module: 'crm', desc: 'People as markdown notes — name, email, company, last-talked-to cadence, tags.' },
-      { id: 'crm.companies',  label: 'Companies',  icon: 'building-2',      module: 'crm', desc: 'Companies as markdown notes — domain, size, industry, related contacts and deals.' },
-      { id: 'crm.activities', label: 'Activities', icon: 'calendar',        module: 'crm', desc: 'Cross-cutting activity timeline — calls, meetings, notes against any contact or deal.' },
+      { id: 'crm.dashboard', label: 'Dashboard', icon: 'layout-grid', module: 'crm', desc: 'Overview cards — today\'s tasks, deal momentum, recent contacts, week stats.' },
+      { id: 'crm.pipeline', label: 'Pipeline', icon: 'trending-up', module: 'crm', desc: 'Sales pipeline. Deals as markdown notes with stage, value and contact frontmatter.' },
+      { id: 'crm.contacts', label: 'Contacts', icon: 'users', module: 'crm', desc: 'People as markdown notes — name, email, company, last-talked-to cadence, tags.' },
+      { id: 'crm.companies', label: 'Companies', icon: 'building-2', module: 'crm', desc: 'Companies as markdown notes — domain, size, industry, related contacts and deals.' },
+      { id: 'crm.activities', label: 'Activities', icon: 'calendar', module: 'crm', desc: 'Cross-cutting activity timeline — calls, meetings, notes against any contact or deal.' },
     ],
   },
   {
     id: 'prm', label: 'PRM', module: 'prm',
     items: [
-      { id: 'prm.partners',       label: 'Partners',       icon: 'handshake',        module: 'prm', desc: 'Partner organisations — relationship status, named contacts, joint pipeline.' },
-      { id: 'prm.registrations',  label: 'Registrations',  icon: 'clipboard-check',  module: 'prm', desc: 'Deal registrations submitted by partners — status, expiry, attached deals.' },
-      { id: 'prm.commissions',    label: 'Commissions',    icon: 'wallet',           module: 'prm', desc: 'Commission ledger across partners — earned, pending, paid, by quarter.' },
-      { id: 'prm.leads',          label: 'Leads',          icon: 'target',           module: 'prm', desc: 'Lead distribution — round-robin/queue assignment to partners or reps.' },
-      { id: 'prm.certifications', label: 'Certifications', icon: 'award',            module: 'prm', desc: 'Partner certifications — track expiries, renewals, training completion.' },
-      { id: 'prm.analytics',      label: 'Analytics',      icon: 'bar-chart-3',      module: 'prm', desc: 'PRM analytics — partner-sourced revenue, top performers, lifecycle funnel.' },
+      { id: 'prm.partners', label: 'Partners', icon: 'handshake', module: 'prm', desc: 'Partner organisations — relationship status, named contacts, joint pipeline.' },
+      { id: 'prm.registrations', label: 'Registrations', icon: 'clipboard-check', module: 'prm', desc: 'Deal registrations submitted by partners — status, expiry, attached deals.' },
+      { id: 'prm.commissions', label: 'Commissions', icon: 'wallet', module: 'prm', desc: 'Commission ledger across partners — earned, pending, paid, by quarter.' },
+      { id: 'prm.leads', label: 'Leads', icon: 'target', module: 'prm', desc: 'Lead distribution — round-robin/queue assignment to partners or reps.' },
+      { id: 'prm.certifications', label: 'Certifications', icon: 'award', module: 'prm', desc: 'Partner certifications — track expiries, renewals, training completion.' },
+      { id: 'prm.analytics', label: 'Analytics', icon: 'bar-chart-3', module: 'prm', desc: 'PRM analytics — partner-sourced revenue, top performers, lifecycle funnel.' },
     ],
   },
   {
@@ -60,17 +60,17 @@ const NAV_GROUPS = [
   {
     id: 'reports', label: 'Reports',
     items: [
-      { id: 'reports.pipeline',     label: 'Pipeline',     icon: 'trending-up', module: 'crm', desc: 'Pipeline coverage and weighted forecast — by stage, owner, source.' },
-      { id: 'reports.sales',        label: 'Sales',        icon: 'bar-chart-3', module: 'crm', desc: 'Closed won / lost trends — quota attainment, win rate, average cycle.' },
-      { id: 'reports.partners',     label: 'Partners',     icon: 'handshake',   module: 'prm', desc: 'Partner contribution — sourced vs influenced revenue, top tiers.' },
-      { id: 'reports.activity',     label: 'Activity',     icon: 'pie-chart',   module: 'crm', desc: 'Activity mix — calls, meetings, emails by rep and account.' },
-      { id: 'reports.productivity', label: 'Productivity', icon: 'sun',         desc: 'Personal productivity — completion rate, streaks, focus blocks, journal volume.' },
+      { id: 'reports.pipeline', label: 'Pipeline', icon: 'trending-up', module: 'crm', desc: 'Pipeline coverage and weighted forecast — by stage, owner, source.' },
+      { id: 'reports.sales', label: 'Sales', icon: 'bar-chart-3', module: 'crm', desc: 'Closed won / lost trends — quota attainment, win rate, average cycle.' },
+      { id: 'reports.partners', label: 'Partners', icon: 'handshake', module: 'prm', desc: 'Partner contribution — sourced vs influenced revenue, top tiers.' },
+      { id: 'reports.activity', label: 'Activity', icon: 'pie-chart', module: 'crm', desc: 'Activity mix — calls, meetings, emails by rep and account.' },
+      { id: 'reports.productivity', label: 'Productivity', icon: 'sun', desc: 'Personal productivity — completion rate, streaks, focus blocks, journal volume.' },
     ],
   },
   {
     id: 'misc', label: '',
     items: [
-      { id: 'team',     label: 'Team',     icon: 'user-cog',   desc: 'Team members, roles, seats — admin view of your Cadence workspace.' },
+      { id: 'team', label: 'Team', icon: 'user-cog', desc: 'Team members, roles, seats — admin view of your Cadence workspace.' },
       { id: 'settings', label: 'Settings', icon: 'settings-2', desc: 'Cadence app settings — folders, headings, week start, API connection.' },
     ],
   },
@@ -89,12 +89,12 @@ const ENTITIES = {
     folder: 'Cadence/Contacts',
     label: 'Contact', plural: 'Contacts',
     fields: [
-      { key: 'name',        label: 'Name',         primary: true },
-      { key: 'email',       label: 'Email',        type: 'email' },
-      { key: 'company',     label: 'Company' },
-      { key: 'role',        label: 'Role' },
+      { key: 'name', label: 'Name', primary: true },
+      { key: 'email', label: 'Email', type: 'email' },
+      { key: 'company', label: 'Company' },
+      { key: 'role', label: 'Role' },
       { key: 'lastContact', label: 'Last contact', type: 'date' },
-      { key: 'tags',        label: 'Tags',         type: 'tags' },
+      { key: 'tags', label: 'Tags', type: 'tags' },
     ],
     columns: ['name', 'company', 'email', 'role', 'lastContact'],
   },
@@ -102,12 +102,12 @@ const ENTITIES = {
     folder: 'Cadence/Companies',
     label: 'Company', plural: 'Companies',
     fields: [
-      { key: 'name',     label: 'Name',     primary: true },
-      { key: 'domain',   label: 'Domain' },
+      { key: 'name', label: 'Name', primary: true },
+      { key: 'domain', label: 'Domain' },
       { key: 'industry', label: 'Industry' },
-      { key: 'size',     label: 'Size' },
-      { key: 'owner',    label: 'Owner' },
-      { key: 'tags',     label: 'Tags',     type: 'tags' },
+      { key: 'size', label: 'Size' },
+      { key: 'owner', label: 'Owner' },
+      { key: 'tags', label: 'Tags', type: 'tags' },
     ],
     columns: ['name', 'domain', 'industry', 'size', 'owner'],
   },
@@ -115,10 +115,10 @@ const ENTITIES = {
     folder: 'Cadence/Partners',
     label: 'Partner', plural: 'Partners',
     fields: [
-      { key: 'name',   label: 'Name',   primary: true },
-      { key: 'tier',   label: 'Tier',   type: 'enum', options: ['Gold', 'Silver', 'Bronze', 'Standard'] },
+      { key: 'name', label: 'Name', primary: true },
+      { key: 'tier', label: 'Tier', type: 'enum', options: ['Gold', 'Silver', 'Bronze', 'Standard'] },
       { key: 'status', label: 'Status', type: 'enum', options: ['Active', 'Onboarding', 'Inactive', 'Churned'] },
-      { key: 'owner',  label: 'Owner' },
+      { key: 'owner', label: 'Owner' },
       { key: 'region', label: 'Region' },
     ],
     columns: ['name', 'tier', 'status', 'region', 'owner'],
@@ -127,12 +127,12 @@ const ENTITIES = {
     folder: 'Cadence/Registrations',
     label: 'Registration', plural: 'Registrations',
     fields: [
-      { key: 'title',     label: 'Title',      primary: true },
-      { key: 'partner',   label: 'Partner' },
-      { key: 'status',    label: 'Status',     type: 'enum', options: ['Submitted', 'Approved', 'Rejected', 'Expired'] },
-      { key: 'value',     label: 'Value',      type: 'currency' },
-      { key: 'submitted', label: 'Submitted',  type: 'date' },
-      { key: 'expires',   label: 'Expires',    type: 'date' },
+      { key: 'title', label: 'Title', primary: true },
+      { key: 'partner', label: 'Partner' },
+      { key: 'status', label: 'Status', type: 'enum', options: ['Submitted', 'Approved', 'Rejected', 'Expired'] },
+      { key: 'value', label: 'Value', type: 'currency' },
+      { key: 'submitted', label: 'Submitted', type: 'date' },
+      { key: 'expires', label: 'Expires', type: 'date' },
     ],
     columns: ['title', 'partner', 'status', 'value', 'expires'],
   },
@@ -140,12 +140,12 @@ const ENTITIES = {
     folder: 'Cadence/Commissions',
     label: 'Commission', plural: 'Commissions',
     fields: [
-      { key: 'reference', label: 'Ref',     primary: true },
-      { key: 'partner',   label: 'Partner' },
-      { key: 'amount',    label: 'Amount',  type: 'currency' },
-      { key: 'status',    label: 'Status',  type: 'enum', options: ['Pending', 'Earned', 'Paid', 'Disputed'] },
-      { key: 'period',    label: 'Period' },
-      { key: 'paidOn',    label: 'Paid on', type: 'date' },
+      { key: 'reference', label: 'Ref', primary: true },
+      { key: 'partner', label: 'Partner' },
+      { key: 'amount', label: 'Amount', type: 'currency' },
+      { key: 'status', label: 'Status', type: 'enum', options: ['Pending', 'Earned', 'Paid', 'Disputed'] },
+      { key: 'period', label: 'Period' },
+      { key: 'paidOn', label: 'Paid on', type: 'date' },
     ],
     columns: ['reference', 'partner', 'amount', 'status', 'period', 'paidOn'],
   },
@@ -153,10 +153,10 @@ const ENTITIES = {
     folder: 'Cadence/Leads',
     label: 'Lead', plural: 'Leads',
     fields: [
-      { key: 'name',     label: 'Name',     primary: true },
-      { key: 'company',  label: 'Company' },
-      { key: 'source',   label: 'Source' },
-      { key: 'status',   label: 'Status',   type: 'enum', options: ['New', 'Contacted', 'Qualified', 'Disqualified', 'Converted'] },
+      { key: 'name', label: 'Name', primary: true },
+      { key: 'company', label: 'Company' },
+      { key: 'source', label: 'Source' },
+      { key: 'status', label: 'Status', type: 'enum', options: ['New', 'Contacted', 'Qualified', 'Disqualified', 'Converted'] },
       { key: 'assigned', label: 'Assigned' },
     ],
     columns: ['name', 'company', 'source', 'status', 'assigned'],
@@ -165,10 +165,10 @@ const ENTITIES = {
     folder: 'Cadence/Certifications',
     label: 'Certification', plural: 'Certifications',
     fields: [
-      { key: 'name',    label: 'Name',    primary: true },
+      { key: 'name', label: 'Name', primary: true },
       { key: 'partner', label: 'Partner' },
-      { key: 'level',   label: 'Level' },
-      { key: 'issued',  label: 'Issued',  type: 'date' },
+      { key: 'level', label: 'Level' },
+      { key: 'issued', label: 'Issued', type: 'date' },
       { key: 'expires', label: 'Expires', type: 'date' },
     ],
     columns: ['name', 'partner', 'level', 'issued', 'expires'],
@@ -178,9 +178,9 @@ const ENTITIES = {
     label: 'Activity', plural: 'Activities',
     fields: [
       { key: 'subject', label: 'Subject', primary: true },
-      { key: 'type',    label: 'Type',    type: 'enum', options: ['Call', 'Email', 'Meeting', 'Note', 'Task'] },
-      { key: 'when',    label: 'When',    type: 'date' },
-      { key: 'with',    label: 'With' },
+      { key: 'type', label: 'Type', type: 'enum', options: ['Call', 'Email', 'Meeting', 'Note', 'Task'] },
+      { key: 'when', label: 'When', type: 'date' },
+      { key: 'with', label: 'With' },
       { key: 'related', label: 'Related' },
     ],
     columns: ['when', 'type', 'subject', 'with', 'related'],
@@ -189,11 +189,11 @@ const ENTITIES = {
     folder: 'Cadence/Sequences',
     label: 'Sequence', plural: 'Sequences',
     fields: [
-      { key: 'name',     label: 'Name',     primary: true },
+      { key: 'name', label: 'Name', primary: true },
       { key: 'audience', label: 'Audience' },
-      { key: 'steps',    label: 'Steps',    type: 'number' },
-      { key: 'active',   label: 'Active',   type: 'number' },
-      { key: 'status',   label: 'Status',   type: 'enum', options: ['Draft', 'Active', 'Paused', 'Archived'] },
+      { key: 'steps', label: 'Steps', type: 'number' },
+      { key: 'active', label: 'Active', type: 'number' },
+      { key: 'status', label: 'Status', type: 'enum', options: ['Draft', 'Active', 'Paused', 'Archived'] },
     ],
     columns: ['name', 'audience', 'steps', 'active', 'status'],
   },
@@ -201,13 +201,13 @@ const ENTITIES = {
     folder: 'Cadence/Projects',
     label: 'Project', plural: 'Projects',
     fields: [
-      { key: 'name',     label: 'Name',     primary: true },
-      { key: 'status',   label: 'Status',   type: 'enum', options: ['active', 'on_hold', 'backlog', 'done', 'cancelled'] },
+      { key: 'name', label: 'Name', primary: true },
+      { key: 'status', label: 'Status', type: 'enum', options: ['active', 'on_hold', 'backlog', 'done', 'cancelled'] },
       { key: 'priority', label: 'Priority', type: 'enum', options: ['low', 'medium', 'high'] },
-      { key: 'owner',    label: 'Owner' },
-      { key: 'started',  label: 'Started',  type: 'date' },
-      { key: 'due',      label: 'Due',      type: 'date' },
-      { key: 'tags',     label: 'Tags',     type: 'tags' },
+      { key: 'owner', label: 'Owner' },
+      { key: 'started', label: 'Started', type: 'date' },
+      { key: 'due', label: 'Due', type: 'date' },
+      { key: 'tags', label: 'Tags', type: 'tags' },
     ],
     columns: ['name', 'status', 'owner', 'due'],
   },
@@ -215,12 +215,12 @@ const ENTITIES = {
     folder: 'Cadence/Pipeline',
     label: 'Deal', plural: 'Deals',
     fields: [
-      { key: 'title',   label: 'Title',   primary: true },
-      { key: 'stage',   label: 'Stage',   type: 'enum', options: ['Lead', 'Qualified', 'Proposal', 'Negotiation', 'Won', 'Lost'] },
-      { key: 'value',   label: 'Value',   type: 'currency' },
+      { key: 'title', label: 'Title', primary: true },
+      { key: 'stage', label: 'Stage', type: 'enum', options: ['Lead', 'Qualified', 'Proposal', 'Negotiation', 'Won', 'Lost'] },
+      { key: 'value', label: 'Value', type: 'currency' },
       { key: 'company', label: 'Company' },
       { key: 'contact', label: 'Contact' },
-      { key: 'owner',   label: 'Owner' },
+      { key: 'owner', label: 'Owner' },
       { key: 'closeBy', label: 'Close by', type: 'date' },
     ],
     columns: ['title', 'stage', 'value', 'company', 'closeBy'],
@@ -314,7 +314,7 @@ function dateInfo(d = new Date()) {
     year: d.getFullYear(),
   };
 }
-function startOfDay(d) { const x = new Date(d); x.setHours(0,0,0,0); return x; }
+function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
 function startOfWeek(d, weekStartsOn = 1) {
   const x = startOfDay(d);
@@ -327,8 +327,8 @@ function weekDates(anchor, weekStartsOn = 1) {
 }
 function sameDay(a, b) {
   return a.getFullYear() === b.getFullYear()
-      && a.getMonth() === b.getMonth()
-      && a.getDate() === b.getDate();
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate();
 }
 
 /* Map a 0-100 % to a colour band — drives progress bar tint. */
@@ -340,17 +340,15 @@ function pctBand(pct) {
 }
 
 /* ─────────── Entity helpers ─────────── */
-function ensureFolderSync(app, path) {
+async function ensureFolderSync(app, path) {
   const parts = path.split('/').filter(Boolean);
   let cur = '';
-  const promises = [];
   for (const p of parts) {
     cur = cur ? `${cur}/${p}` : p;
     if (!app.vault.getAbstractFileByPath(cur)) {
-      promises.push(app.vault.createFolder(cur).catch(() => {}));
+      await app.vault.createFolder(cur).catch(() => { });
     }
   }
-  return Promise.all(promises);
 }
 
 /* List markdown files inside an entity's folder, without enumerating the
@@ -450,7 +448,7 @@ function projectTemplate(name) {
     `name: ${name}`,
     'status: active',
     'priority: medium',
-    'owner:',
+    'owner: []',
     `started: ${today}`,
     'due:',
     'tags: []',
@@ -612,7 +610,7 @@ async function ensureDailyNote(app, settings, date = new Date()) {
   if (file) return file;
   const folder = (settings.dailyNoteFolder || '').replace(/\/$/, '');
   if (folder && !app.vault.getAbstractFileByPath(folder)) {
-    try { await app.vault.createFolder(folder); } catch (_) {}
+    try { await app.vault.createFolder(folder); } catch (_) { }
   }
   const template = [
     `# ${ymd(date)}`, '',
@@ -667,7 +665,7 @@ function reminderId() { return 'rem_' + Math.random().toString(36).slice(2, 10) 
 function nextRepeat(when, repeat) {
   if (!when) return null;
   const d = when instanceof Date ? when : new Date(when);
-  if (repeat === 'daily')  return new Date(d.getTime() + 86400000);
+  if (repeat === 'daily') return new Date(d.getTime() + 86400000);
   if (repeat === 'weekly') return new Date(d.getTime() + 7 * 86400000);
   return null;
 }
@@ -788,9 +786,9 @@ class CadenceCaptureModal extends obsidian.Modal {
       b.addEventListener('click', () => setQuick(deltaMs));
     };
     mkQ('+15m', 15 * 60 * 1000);
-    mkQ('+1h',  60 * 60 * 1000);
-    mkQ('+3h',  3 * 60 * 60 * 1000);
-    mkQ('Tomorrow 9am', () => {});
+    mkQ('+1h', 60 * 60 * 1000);
+    mkQ('+3h', 3 * 60 * 60 * 1000);
+    mkQ('Tomorrow 9am', () => { });
     quick.lastChild.addEventListener('click', () => {
       const d = new Date();
       d.setDate(d.getDate() + 1);
@@ -1104,7 +1102,7 @@ class CadenceImportModal extends obsidian.Modal {
   constructor(app, opts) {
     super(app);
     this.entityKey = (opts && opts.entityKey) || 'contact';
-    this.onSubmit = (opts && opts.onSubmit) || (() => {});
+    this.onSubmit = (opts && opts.onSubmit) || (() => { });
     this.csvText = '';
     this.headers = [];
     this.rows = [];
@@ -1145,7 +1143,7 @@ class CadenceImportModal extends obsidian.Modal {
     tabs.style.gap = '6px';
     const pasteBtn = tabs.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Paste' });
     pasteBtn.type = 'button';
-    const fileBtn  = tabs.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Pick .csv from vault' });
+    const fileBtn = tabs.createEl('button', { cls: 'cad-btn cad-btn-sm', text: 'Pick .csv from vault' });
     fileBtn.type = 'button';
 
     const ta = csvWrap.createEl('textarea', { cls: 'cad-create-input' });
@@ -1411,8 +1409,8 @@ class CadenceEntityCreateModal extends obsidian.Modal {
         if (['stage', 'status', 'priority', 'tier', 'type'].includes(f.key) && f.options && f.options.length) {
           const sensible = f.key === 'stage' ? 'Lead'
             : f.key === 'status' ? (f.options.find((o) => /active|new|draft|submitted|pending/i.test(o)) || f.options[0])
-            : f.key === 'priority' ? (f.options.find((o) => /medium/i.test(o)) || f.options[0])
-            : f.options[0];
+              : f.key === 'priority' ? (f.options.find((o) => /medium/i.test(o)) || f.options[0])
+                : f.options[0];
           if (f.options.includes(sensible)) input.value = sensible;
         }
       } else if (fieldType === 'date') {
@@ -1488,17 +1486,17 @@ class CadenceEntityCreateModal extends obsidian.Modal {
     if (!isPrimary) return '';
     const ek = this.entityKey;
     const examples = {
-      contact:      'e.g. Jane Smith',
-      company:      'e.g. Acme Corp',
-      partner:      'e.g. Acme Distribution',
-      deal:         'e.g. Acme — FTTH expansion',
+      contact: 'e.g. Jane Smith',
+      company: 'e.g. Acme Corp',
+      partner: 'e.g. Acme Distribution',
+      deal: 'e.g. Acme — FTTH expansion',
       registration: 'e.g. Vodacom 12-site FTTB',
-      commission:   'e.g. C-2026-Q2-0042',
-      lead:         'e.g. Sarah from Vodacom',
-      certification:'e.g. Cisco CCNP — May 2026',
-      activity:     'e.g. Discovery call with Jane',
-      sequence:     'e.g. Outbound — SMB',
-      project:      'e.g. Q3 Cadence launch',
+      commission: 'e.g. C-2026-Q2-0042',
+      lead: 'e.g. Sarah from Vodacom',
+      certification: 'e.g. Cisco CCNP — May 2026',
+      activity: 'e.g. Discovery call with Jane',
+      sequence: 'e.g. Outbound — SMB',
+      project: 'e.g. Q3 Cadence launch',
     };
     return examples[ek] || '';
   }
@@ -1616,7 +1614,7 @@ class CadenceAppView extends obsidian.ItemView {
   }
 
   _migrateModeId(id) {
-    if (id === 'today')   return 'planner.today';
+    if (id === 'today') return 'planner.today';
     if (id === 'planner') return 'planner.calendar';
     return SURFACE_BY_ID[id] ? id : 'home';
   }
@@ -1710,9 +1708,9 @@ class CadenceAppView extends obsidian.ItemView {
     return reminders.filter((r) => r.when && new Date(r.when).getTime() <= now).length;
   }
 
-  getViewType()    { return VIEW_TYPE_CADENCE_APP; }
+  getViewType() { return VIEW_TYPE_CADENCE_APP; }
   getDisplayText() { return 'Cadence'; }
-  getIcon()        { return 'sparkles'; }
+  getIcon() { return 'sparkles'; }
 
   async setMode(m) {
     this.mode = this._migrateModeId(m);
@@ -1785,7 +1783,7 @@ class CadenceAppView extends obsidian.ItemView {
 
     /* Hamburger — visible only on mobile via CSS, toggles the nav drawer */
     const burger = topbar.createEl('button', { cls: 'cad-mobile-burger' });
-    try { obsidian.setIcon(burger, 'menu'); } catch (_) {}
+    try { obsidian.setIcon(burger, 'menu'); } catch (_) { }
     burger.title = 'Show nav';
     burger.addEventListener('click', () => this._toggleMobileNav());
 
@@ -1798,7 +1796,7 @@ class CadenceAppView extends obsidian.ItemView {
     /* Cadence-app dark mode toggle (scoped — does NOT touch Obsidian's mode) */
     const dark = !!this.plugin.settings.cadenceAppDark;
     const themeBtn = topRight.createEl('button', { cls: 'cad-topbar-icon-btn' });
-    try { obsidian.setIcon(themeBtn, dark ? 'sun' : 'moon'); } catch (_) {}
+    try { obsidian.setIcon(themeBtn, dark ? 'sun' : 'moon'); } catch (_) { }
     themeBtn.title = dark ? 'Cadence: switch to light' : 'Cadence: switch to dark';
     themeBtn.addEventListener('click', () => this._toggleCadenceDark());
 
@@ -1823,7 +1821,7 @@ class CadenceAppView extends obsidian.ItemView {
       if (group.label) {
         const head = groupEl.createDiv({ cls: 'cad-nav-group-head' });
         const chev = head.createSpan({ cls: 'cad-nav-group-chev' });
-        try { obsidian.setIcon(chev, isCollapsed ? 'chevron-right' : 'chevron-down'); } catch (_) {}
+        try { obsidian.setIcon(chev, isCollapsed ? 'chevron-right' : 'chevron-down'); } catch (_) { }
         head.createSpan({ cls: 'cad-nav-group-label', text: group.label.toUpperCase() });
         head.addEventListener('click', () => this.toggleGroup(group.id));
       }
@@ -1835,7 +1833,7 @@ class CadenceAppView extends obsidian.ItemView {
             cls: 'cad-app-nav-item' + (this.mode === s.id ? ' active' : ''),
           });
           const ic = item.createSpan({ cls: 'cad-app-nav-icon' });
-          try { obsidian.setIcon(ic, s.icon); } catch (_) {}
+          try { obsidian.setIcon(ic, s.icon); } catch (_) { }
           item.createSpan({ cls: 'cad-app-nav-label', text: s.label });
           if (!BUILT_SURFACES.has(s.id)) {
             item.createSpan({ cls: 'cad-app-nav-badge', text: 'soon' });
@@ -1863,30 +1861,30 @@ class CadenceAppView extends obsidian.ItemView {
     }
 
     const route = {
-      'home':                () => this.renderHome(content),
-      'planner.inbox':       () => this.renderInbox(content),
-      'planner.today':       () => this.renderTodayPane(content),
-      'planner.calendar':    () => this.renderPlannerPane(content),
-      'planner.projects':    () => this.renderProjectsView(content),
-      'crm.dashboard':       () => this.renderDashboard(content),
-      'crm.pipeline':        () => this.renderEntityKanban(content, 'deal', 'stage', DEAL_STAGES),
-      'crm.contacts':        () => this.renderEntityList(content, 'contact'),
-      'crm.companies':       () => this.renderEntityList(content, 'company'),
-      'crm.activities':      () => this.renderEntityList(content, 'activity'),
-      'prm.partners':        () => this.renderEntityList(content, 'partner'),
-      'prm.registrations':   () => this.renderEntityList(content, 'registration'),
-      'prm.commissions':     () => this.renderEntityList(content, 'commission'),
-      'prm.leads':           () => this.renderEntityList(content, 'lead'),
-      'prm.certifications':  () => this.renderEntityList(content, 'certification'),
-      'prm.analytics':       () => this.renderPRMAnalytics(content),
-      'workflow.sequences':  () => this.renderEntityList(content, 'sequence'),
-      'reports.pipeline':    () => this.renderReportPipeline(content),
-      'reports.sales':       () => this.renderReportSales(content),
-      'reports.partners':    () => this.renderReportPartners(content),
-      'reports.activity':    () => this.renderReportActivity(content),
-      'reports.productivity':() => this.renderProductivity(content),
-      'team':                () => this.renderTeam(content),
-      'settings':            () => this.openSettingsTab(content),
+      'home': () => this.renderHome(content),
+      'planner.inbox': () => this.renderInbox(content),
+      'planner.today': () => this.renderTodayPane(content),
+      'planner.calendar': () => this.renderPlannerPane(content),
+      'planner.projects': () => this.renderProjectsView(content),
+      'crm.dashboard': () => this.renderDashboard(content),
+      'crm.pipeline': () => this.renderEntityKanban(content, 'deal', 'stage', DEAL_STAGES),
+      'crm.contacts': () => this.renderEntityList(content, 'contact'),
+      'crm.companies': () => this.renderEntityList(content, 'company'),
+      'crm.activities': () => this.renderEntityList(content, 'activity'),
+      'prm.partners': () => this.renderEntityList(content, 'partner'),
+      'prm.registrations': () => this.renderEntityList(content, 'registration'),
+      'prm.commissions': () => this.renderEntityList(content, 'commission'),
+      'prm.leads': () => this.renderEntityList(content, 'lead'),
+      'prm.certifications': () => this.renderEntityList(content, 'certification'),
+      'prm.analytics': () => this.renderPRMAnalytics(content),
+      'workflow.sequences': () => this.renderEntityList(content, 'sequence'),
+      'reports.pipeline': () => this.renderReportPipeline(content),
+      'reports.sales': () => this.renderReportSales(content),
+      'reports.partners': () => this.renderReportPartners(content),
+      'reports.activity': () => this.renderReportActivity(content),
+      'reports.productivity': () => this.renderProductivity(content),
+      'team': () => this.renderTeam(content),
+      'settings': () => this.openSettingsTab(content),
     };
     if (route[this.mode]) {
       await route[this.mode]();
@@ -1903,7 +1901,7 @@ class CadenceAppView extends obsidian.ItemView {
     wrap.createDiv({ cls: 'cad-soon-desc', text: surface.desc });
 
     const ic = wrap.createDiv({ cls: 'cad-soon-icon' });
-    try { obsidian.setIcon(ic, surface.icon); } catch (_) {}
+    try { obsidian.setIcon(ic, surface.icon); } catch (_) { }
 
     const meta = wrap.createDiv({ cls: 'cad-soon-meta' });
     meta.setText('This surface is scaffolded but not yet built. Tell the team to flesh it out next.');
@@ -2198,9 +2196,9 @@ class CadenceAppView extends obsidian.ItemView {
       inp.addEventListener('input', () => { clearTimeout(t); t = setTimeout(commit, 350); });
       inp.addEventListener('blur', commit);
     };
-    mkMeta('OWNER',   'owner');
+    mkMeta('OWNER', 'owner');
     mkMeta('STARTED', 'started', 'date');
-    mkMeta('DUE',     'due',     'date');
+    mkMeta('DUE', 'due', 'date');
 
     const progWrap = hero.createDiv({ cls: 'cad-proj-progress-wrap cad-pd-progress' });
     progWrap.dataset.pctBand = pctBand(meta.percent);
@@ -2225,11 +2223,11 @@ class CadenceAppView extends obsidian.ItemView {
 
     /* ── Body sections (right column) ── */
     const bodySections = [
-      { key: 'Brief',        label: 'BRIEF',        rows: 4, placeholder: 'The outcome we want, why now.' },
-      { key: 'Scope',        label: 'SCOPE',        rows: 5, placeholder: 'In scope / out of scope.' },
-      { key: 'Risks',        label: 'RISKS',        rows: 4, placeholder: 'What could go wrong.' },
+      { key: 'Brief', label: 'BRIEF', rows: 4, placeholder: 'The outcome we want, why now.' },
+      { key: 'Scope', label: 'SCOPE', rows: 5, placeholder: 'In scope / out of scope.' },
+      { key: 'Risks', label: 'RISKS', rows: 4, placeholder: 'What could go wrong.' },
       { key: 'Stakeholders', label: 'STAKEHOLDERS', rows: 3, placeholder: 'Who cares about this project.' },
-      { key: 'Notes',        label: 'NOTES',        rows: 5, placeholder: 'Anything else.' },
+      { key: 'Notes', label: 'NOTES', rows: 5, placeholder: 'Anything else.' },
     ];
     bodySections.forEach((s) => this._renderProjectTextSection(right, file, meta.sections, s, flashSaved));
   }
@@ -2721,7 +2719,7 @@ class CadenceAppView extends obsidian.ItemView {
           action: () => this.setMode('planner.today'),
         });
       }
-    } catch (_) {}
+    } catch (_) { }
 
     /* 2. Overdue reminders */
     const reminders = (settings.reminders || []).filter((r) => !r.done);
@@ -2819,7 +2817,7 @@ class CadenceAppView extends obsidian.ItemView {
             upcoming.push({ file: f, milestone: meta.next, name: projectNameFromPath(this.app, f.path) });
           }
         }
-      } catch (_) {}
+      } catch (_) { }
     }
     upcoming.sort((a, b) => a.milestone.date - b.milestone.date);
     if (upcoming.length) {
@@ -3016,7 +3014,7 @@ class CadenceAppView extends obsidian.ItemView {
         if (meta.next && meta.next.date && meta.next.date >= today && meta.next.date <= horizon) {
           items.push({ date: meta.next.date, title: `${entityValue(e, 'name', ENTITIES.project) || e.basename} — ${meta.next.title || 'milestone'}`, type: 'Milestone', file: e.file });
         }
-      } catch (_) {}
+      } catch (_) { }
     }
     // Registration expiries
     listEntities(this.app, 'registration').forEach((e) => {
@@ -3334,9 +3332,9 @@ class CadenceAppView extends obsidian.ItemView {
       return b;
     };
     if (r.when) {
-      mk('+15m',  'Snooze 15 minutes', () => this.plugin.snoozeReminder(r.id, 15 * 60 * 1000));
-      mk('+1h',   'Snooze 1 hour',     () => this.plugin.snoozeReminder(r.id, 60 * 60 * 1000));
-      mk('Tom.',  'Snooze to tomorrow 9am', () => {
+      mk('+15m', 'Snooze 15 minutes', () => this.plugin.snoozeReminder(r.id, 15 * 60 * 1000));
+      mk('+1h', 'Snooze 1 hour', () => this.plugin.snoozeReminder(r.id, 60 * 60 * 1000));
+      mk('Tom.', 'Snooze to tomorrow 9am', () => {
         const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0);
         this.plugin.updateReminder(r.id, { when: d.toISOString(), notified: false });
       });
@@ -3401,7 +3399,7 @@ class CadenceAppView extends obsidian.ItemView {
       // Drop target: drop a card here to update its `groupBy` field to this stage.
       list.addEventListener('dragover', (ev) => {
         ev.preventDefault();
-        try { ev.dataTransfer.dropEffect = 'move'; } catch (_) {}
+        try { ev.dataTransfer.dropEffect = 'move'; } catch (_) { }
         col.addClass('drag-over');
       });
       list.addEventListener('dragleave', (ev) => {
@@ -3453,7 +3451,7 @@ class CadenceAppView extends obsidian.ItemView {
                 ev.dataTransfer.setData('text/cadence-stage', stage);
                 // Plain text payload too, so dropping into editors yields a link
                 ev.dataTransfer.setData('text/plain', `[[${e.file.basename}]]`);
-              } catch (_) {}
+              } catch (_) { }
             });
             card.addEventListener('dragend', () => card.removeClass('dragging'));
           } else {
@@ -3473,16 +3471,16 @@ class CadenceAppView extends obsidian.ItemView {
     const dealDef = ENTITIES.deal;
     const allDeals = listEntities(this.app, 'deal');
     const open = allDeals.filter((e) => !['Won', 'Lost'].includes(String(entityValue(e, 'stage', dealDef))));
-    const won  = allDeals.filter((e) => String(entityValue(e, 'stage', dealDef)) === 'Won');
+    const won = allDeals.filter((e) => String(entityValue(e, 'stage', dealDef)) === 'Won');
     const lost = allDeals.filter((e) => String(entityValue(e, 'stage', dealDef)) === 'Lost');
     const dealValue = (e) => Number(entityValue(e, 'value', dealDef)) || 0;
     const sumVal = (arr) => arr.reduce((s, e) => s + dealValue(e), 0);
     const winRate = won.length + lost.length === 0 ? 0 : Math.round((won.length / (won.length + lost.length)) * 100);
     const avgDeal = won.length === 0 ? 0 : sumVal(won) / won.length;
 
-    const contacts  = listEntityFiles(this.app, 'contact');
+    const contacts = listEntityFiles(this.app, 'contact');
     const companies = listEntityFiles(this.app, 'company');
-    const partners  = listEntityFiles(this.app, 'partner');
+    const partners = listEntityFiles(this.app, 'partner');
     const activities = listEntities(this.app, 'activity');
 
     // ─── Header ────────────────────────────────────────
@@ -3501,10 +3499,10 @@ class CadenceAppView extends obsidian.ItemView {
       if (sub) c.createDiv({ cls: 'cad-stat-sub', text: sub });
     };
     stat('OPEN PIPELINE', open.length, fmtValue(sumVal(open), 'currency'), 'sky');
-    stat('WON',           won.length,  fmtValue(sumVal(won),  'currency'), 'emerald');
-    stat('LOST',          lost.length, fmtValue(sumVal(lost), 'currency'), 'rose');
-    stat('WIN RATE',      `${winRate}%`, `${won.length}/${won.length + lost.length} closed`, 'mint');
-    stat('AVG DEAL',      fmtValue(avgDeal, 'currency'), `${won.length} won deals`, 'warn');
+    stat('WON', won.length, fmtValue(sumVal(won), 'currency'), 'emerald');
+    stat('LOST', lost.length, fmtValue(sumVal(lost), 'currency'), 'rose');
+    stat('WIN RATE', `${winRate}%`, `${won.length}/${won.length + lost.length} closed`, 'mint');
+    stat('AVG DEAL', fmtValue(avgDeal, 'currency'), `${won.length} won deals`, 'warn');
 
     // ─── Pipeline by stage ─────────────────────────────
     root.createDiv({ cls: 'cad-section-label-lg', text: 'PIPELINE BY STAGE' });
@@ -3528,7 +3526,7 @@ class CadenceAppView extends obsidian.ItemView {
 
     // ─── Two-column body ───────────────────────────────
     const cols = root.createDiv({ cls: 'cad-dash-cols' });
-    const left  = cols.createDiv({ cls: 'cad-dash-col' });
+    const left = cols.createDiv({ cls: 'cad-dash-col' });
     const right = cols.createDiv({ cls: 'cad-dash-col' });
 
     // Hot deals — top by value, open only
@@ -3587,9 +3585,9 @@ class CadenceAppView extends obsidian.ItemView {
         c.addEventListener('click', () => this.setMode(mode));
       }
     };
-    mkMini('CONTACTS',  contacts.length,  'warn', 'crm.contacts');
-    mkMini('COMPANIES', companies.length, 'sky',  'crm.companies');
-    mkMini('PARTNERS',  partners.length,  'rose', 'prm.partners');
+    mkMini('CONTACTS', contacts.length, 'warn', 'crm.contacts');
+    mkMini('COMPANIES', companies.length, 'sky', 'crm.companies');
+    mkMini('PARTNERS', partners.length, 'rose', 'prm.partners');
   }
 
   /* Reusable list card on the dashboard. */
@@ -3653,10 +3651,10 @@ class CadenceAppView extends obsidian.ItemView {
       c.createDiv({ cls: 'cad-stat-value', text: String(value) });
       if (sub) c.createDiv({ cls: 'cad-stat-sub', text: sub });
     };
-    stat('COMPLETION', `${completion}%`,                       `${totalDone}/${totalOpen + totalDone} tasks`, 'emerald');
-    stat('STREAK',     `${streak}d`,                            'consecutive active days',                     'mint');
-    stat('ACTIVE',     `${activeDays}/30`,                      'days with a note',                            'sky');
-    stat('JOURNAL',    totalJournalChars.toLocaleString(),      'characters written',                          'warn');
+    stat('COMPLETION', `${completion}%`, `${totalDone}/${totalOpen + totalDone} tasks`, 'emerald');
+    stat('STREAK', `${streak}d`, 'consecutive active days', 'mint');
+    stat('ACTIVE', `${activeDays}/30`, 'days with a note', 'sky');
+    stat('JOURNAL', totalJournalChars.toLocaleString(), 'characters written', 'warn');
 
     // Bar chart of completed tasks per day (last 14 days, oldest left)
     root.createDiv({ cls: 'cad-section-label-lg', text: 'TASKS DONE — LAST 14 DAYS' });
@@ -3743,7 +3741,7 @@ class CadenceAppView extends obsidian.ItemView {
     const def = ENTITIES.deal;
     const deals = listEntities(this.app, 'deal');
     const open = deals.filter((e) => !['Won', 'Lost'].includes(String(entityValue(e, 'stage', def))));
-    const won  = deals.filter((e) => String(entityValue(e, 'stage', def)) === 'Won');
+    const won = deals.filter((e) => String(entityValue(e, 'stage', def)) === 'Won');
     const lost = deals.filter((e) => String(entityValue(e, 'stage', def)) === 'Lost');
     const dealValue = (e) => Number(entityValue(e, 'value', def)) || 0;
     const sumVal = (arr) => arr.reduce((s, e) => s + dealValue(e), 0);
@@ -3763,11 +3761,11 @@ class CadenceAppView extends obsidian.ItemView {
       c.createDiv({ cls: 'cad-stat-value', text: String(value) });
       if (sub) c.createDiv({ cls: 'cad-stat-sub', text: sub });
     };
-    stat('OPEN',       open.length,                     fmtValue(sumVal(open), 'currency'),  'sky');
-    stat('WEIGHTED',   fmtValue(weighted, 'currency'),  'forecast on open',                  'mint');
-    stat('WON',        won.length,                      fmtValue(sumVal(won),  'currency'),  'emerald');
-    stat('LOST',       lost.length,                     fmtValue(sumVal(lost), 'currency'),  'rose');
-    stat('WIN RATE',   `${winRate}%`,                   `${won.length}/${won.length + lost.length} closed`, 'warn');
+    stat('OPEN', open.length, fmtValue(sumVal(open), 'currency'), 'sky');
+    stat('WEIGHTED', fmtValue(weighted, 'currency'), 'forecast on open', 'mint');
+    stat('WON', won.length, fmtValue(sumVal(won), 'currency'), 'emerald');
+    stat('LOST', lost.length, fmtValue(sumVal(lost), 'currency'), 'rose');
+    stat('WIN RATE', `${winRate}%`, `${won.length}/${won.length + lost.length} closed`, 'warn');
 
     /* By stage table (existing, kept) */
     root.createDiv({ cls: 'cad-section-label-lg', text: 'BY STAGE' });
@@ -3786,7 +3784,7 @@ class CadenceAppView extends obsidian.ItemView {
 
     /* Two-col body: by owner + aging cohorts */
     const cols = root.createDiv({ cls: 'cad-dash-cols' });
-    const left  = cols.createDiv({ cls: 'cad-dash-col' });
+    const left = cols.createDiv({ cls: 'cad-dash-col' });
     const right = cols.createDiv({ cls: 'cad-dash-col' });
 
     // Pipeline by owner
@@ -3809,10 +3807,10 @@ class CadenceAppView extends obsidian.ItemView {
     // Aging cohorts (file mtime)
     const now = Date.now();
     const cohorts = [
-      { label: '0–7 DAYS',  cutoff: 7,        count: 0, value: 0, accent: 'emerald' },
-      { label: '8–30 DAYS', cutoff: 30,       count: 0, value: 0, accent: 'mint' },
-      { label: '31–90 DAYS', cutoff: 90,      count: 0, value: 0, accent: 'warn' },
-      { label: '90+ DAYS',  cutoff: Infinity, count: 0, value: 0, accent: 'rose' },
+      { label: '0–7 DAYS', cutoff: 7, count: 0, value: 0, accent: 'emerald' },
+      { label: '8–30 DAYS', cutoff: 30, count: 0, value: 0, accent: 'mint' },
+      { label: '31–90 DAYS', cutoff: 90, count: 0, value: 0, accent: 'warn' },
+      { label: '90+ DAYS', cutoff: Infinity, count: 0, value: 0, accent: 'rose' },
     ];
     open.forEach((e) => {
       const mtime = e.file && e.file.stat ? e.file.stat.mtime : now;
@@ -3853,7 +3851,7 @@ class CadenceAppView extends obsidian.ItemView {
     root.addClass('cadence-report');
     const def = ENTITIES.deal;
     const deals = listEntities(this.app, 'deal');
-    const won  = deals.filter((e) => String(entityValue(e, 'stage', def)) === 'Won');
+    const won = deals.filter((e) => String(entityValue(e, 'stage', def)) === 'Won');
     const lost = deals.filter((e) => String(entityValue(e, 'stage', def)) === 'Lost');
     const dealValue = (e) => Number(entityValue(e, 'value', def)) || 0;
     const sumVal = (arr) => arr.reduce((s, e) => s + dealValue(e), 0);
@@ -3868,13 +3866,13 @@ class CadenceAppView extends obsidian.ItemView {
       c.createDiv({ cls: 'cad-stat-value', text: String(value) });
       if (sub) c.createDiv({ cls: 'cad-stat-sub', text: sub });
     };
-    stat('REVENUE',     fmtValue(sumVal(won), 'currency'),  `${won.length} deals`,             'emerald');
-    stat('LOST',        fmtValue(sumVal(lost), 'currency'), `${lost.length} deals`,            'rose');
+    stat('REVENUE', fmtValue(sumVal(won), 'currency'), `${won.length} deals`, 'emerald');
+    stat('LOST', fmtValue(sumVal(lost), 'currency'), `${lost.length} deals`, 'rose');
     const total = sumVal(won) + sumVal(lost);
     const captureRate = total === 0 ? 0 : Math.round((sumVal(won) / total) * 100);
-    stat('CAPTURE',     `${captureRate}%`,                  'of closed value',                  'mint');
+    stat('CAPTURE', `${captureRate}%`, 'of closed value', 'mint');
     const avg = won.length === 0 ? 0 : sumVal(won) / won.length;
-    stat('AVG DEAL',    fmtValue(avg, 'currency'),          'won deals',                        'sky');
+    stat('AVG DEAL', fmtValue(avg, 'currency'), 'won deals', 'sky');
 
     /* Revenue by month (last 6 months, by file mtime as close proxy) */
     const now = new Date();
@@ -3910,7 +3908,7 @@ class CadenceAppView extends obsidian.ItemView {
 
     /* Two-col: top wins + top owners */
     const cols = root.createDiv({ cls: 'cad-dash-cols' });
-    const left  = cols.createDiv({ cls: 'cad-dash-col' });
+    const left = cols.createDiv({ cls: 'cad-dash-col' });
     const right = cols.createDiv({ cls: 'cad-dash-col' });
 
     const topWins = [...won]
@@ -3972,10 +3970,10 @@ class CadenceAppView extends obsidian.ItemView {
       c.createDiv({ cls: 'cad-stat-value', text: String(value) });
       if (sub) c.createDiv({ cls: 'cad-stat-sub', text: sub });
     };
-    stat('PARTNERS',       partners.length,                                                  'on the books',                       'sky');
-    stat('PARTNER DEALS',  partnerSourced.length,                                            fmtValue(partnerSourced.reduce((s, e) => s + dealValue(e), 0), 'currency'), 'mint');
-    stat('PARTNER REV',    fmtValue(partnerWon.reduce((s, e) => s + dealValue(e), 0), 'currency'), `${partnerWon.length} won`,        'emerald');
-    stat('UNIQUE SOURCES', byPartner.size,                                                   'including direct',                   'warn');
+    stat('PARTNERS', partners.length, 'on the books', 'sky');
+    stat('PARTNER DEALS', partnerSourced.length, fmtValue(partnerSourced.reduce((s, e) => s + dealValue(e), 0), 'currency'), 'mint');
+    stat('PARTNER REV', fmtValue(partnerWon.reduce((s, e) => s + dealValue(e), 0), 'currency'), `${partnerWon.length} won`, 'emerald');
+    stat('UNIQUE SOURCES', byPartner.size, 'including direct', 'warn');
 
     /* Tier breakdown */
     const tierMap = new Map();
@@ -4000,7 +3998,7 @@ class CadenceAppView extends obsidian.ItemView {
 
     /* Two-col: deals-by-partner table + cert expiries */
     const cols = root.createDiv({ cls: 'cad-dash-cols' });
-    const left  = cols.createDiv({ cls: 'cad-dash-col' });
+    const left = cols.createDiv({ cls: 'cad-dash-col' });
     const right = cols.createDiv({ cls: 'cad-dash-col' });
 
     // Deals by partner — keep table style
@@ -4102,7 +4100,7 @@ class CadenceAppView extends obsidian.ItemView {
 
     /* Two-col: top contacts + recent activity */
     const cols = root.createDiv({ cls: 'cad-dash-cols' });
-    const left  = cols.createDiv({ cls: 'cad-dash-col' });
+    const left = cols.createDiv({ cls: 'cad-dash-col' });
     const right = cols.createDiv({ cls: 'cad-dash-col' });
 
     // Top contacts by activity count
@@ -4159,13 +4157,13 @@ class CadenceAppView extends obsidian.ItemView {
       c.createDiv({ cls: 'cad-stat-value', text: String(value) });
       if (sub) c.createDiv({ cls: 'cad-stat-sub', text: sub });
     };
-    stat('PARTNERS',         partners.length,                            'on the books',                              'sky');
-    stat('SOURCED DEALS',    partnerSourced.length,                      fmtValue(sumVal(partnerSourced), 'currency'),'mint');
-    stat('PARTNER REVENUE',  fmtValue(sumVal(partnerWon), 'currency'),   `${partnerWon.length} won`,                  'emerald');
+    stat('PARTNERS', partners.length, 'on the books', 'sky');
+    stat('SOURCED DEALS', partnerSourced.length, fmtValue(sumVal(partnerSourced), 'currency'), 'mint');
+    stat('PARTNER REVENUE', fmtValue(sumVal(partnerWon), 'currency'), `${partnerWon.length} won`, 'emerald');
     const totalSourcedValue = sumVal(partnerSourced);
     const totalDealValue = sumVal(deals);
     const sharePct = totalDealValue === 0 ? 0 : Math.round((totalSourcedValue / totalDealValue) * 100);
-    stat('PARTNER SHARE',    `${sharePct}%`,                             'of total pipeline value',                   'warn');
+    stat('PARTNER SHARE', `${sharePct}%`, 'of total pipeline value', 'warn');
 
     /* Tier breakdown */
     const tierMap = new Map();
@@ -4206,7 +4204,7 @@ class CadenceAppView extends obsidian.ItemView {
 
     /* Two-col: top partners by revenue + funnel */
     const cols = root.createDiv({ cls: 'cad-dash-cols' });
-    const left  = cols.createDiv({ cls: 'cad-dash-col' });
+    const left = cols.createDiv({ cls: 'cad-dash-col' });
     const right = cols.createDiv({ cls: 'cad-dash-col' });
 
     // Top partners by won revenue
@@ -4246,9 +4244,9 @@ class CadenceAppView extends obsidian.ItemView {
       s.setText(sub);
     };
     mkF('SOURCED', partnerSourced.length, fmtValue(sumVal(partnerSourced), 'currency'), 'sky');
-    mkF('OPEN',    sourcedOpen.length,    fmtValue(sumVal(sourcedOpen),    'currency'), 'mint');
-    mkF('WON',     partnerWon.length,     fmtValue(sumVal(partnerWon),     'currency'), 'emerald');
-    mkF('LOST',    sourcedLost.length,    fmtValue(sumVal(sourcedLost),    'currency'), 'rose');
+    mkF('OPEN', sourcedOpen.length, fmtValue(sumVal(sourcedOpen), 'currency'), 'mint');
+    mkF('WON', partnerWon.length, fmtValue(sumVal(partnerWon), 'currency'), 'emerald');
+    mkF('LOST', sourcedLost.length, fmtValue(sumVal(sourcedLost), 'currency'), 'rose');
 
     const convCard = right.createDiv({ cls: 'cad-dash-card' });
     convCard.createDiv({ cls: 'cad-dash-card-head' }).createDiv({ cls: 'cad-dash-card-title', text: `CONVERSION · sourced → won` });
@@ -4281,7 +4279,7 @@ class CadenceAppView extends obsidian.ItemView {
     root.addClass('cadence-soon');
     const wrap = root.createDiv({ cls: 'cad-soon-wrap' });
     const ic = wrap.createDiv({ cls: 'cad-soon-icon' });
-    try { obsidian.setIcon(ic, 'settings-2'); } catch (_) {}
+    try { obsidian.setIcon(ic, 'settings-2'); } catch (_) { }
     wrap.createDiv({ cls: 'cad-eyebrow', text: 'CADENCE' });
     wrap.createDiv({ cls: 'cad-soon-title', text: 'Settings' });
     wrap.createDiv({ cls: 'cad-soon-desc', text: 'Configure folders, headings, week start, default tab, and the (future) Cadence API connection.' });
@@ -4444,7 +4442,7 @@ class CadenceAppView extends obsidian.ItemView {
     hero.createSpan({ cls: 'cad-day', text: String(info.day) });
     const monthCol = hero.createDiv();
     monthCol.createDiv({ cls: 'cad-month', text: info.month });
-    monthCol.createDiv({ cls: 'cad-year',  text: String(info.year) });
+    monthCol.createDiv({ cls: 'cad-year', text: String(info.year) });
 
     const taskCount = this.todayParsed.tasks.filter((l) => / \[ \] /.test(l)).length;
     root.createDiv({
@@ -4584,7 +4582,7 @@ class CadenceAppView extends obsidian.ItemView {
     const titleWrap = header.createDiv({ cls: 'cad-pl-title-wrap' });
     titleWrap.createDiv({ cls: 'cad-eyebrow', text: 'WEEK OF' });
     const startStr = days[0].toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
-    const endStr   = days[6].toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+    const endStr = days[6].toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
     titleWrap.createDiv({ cls: 'cad-pl-title', text: `${startStr} – ${endStr}` });
 
     const nav = header.createDiv({ cls: 'cad-pl-nav' });
@@ -4592,9 +4590,9 @@ class CadenceAppView extends obsidian.ItemView {
       const b = nav.createEl('button', { text: label, cls: 'cad-pl-btn ' + cls });
       b.addEventListener('click', fn);
     };
-    mkBtn('◀',     () => { this.plannerAnchor = addDays(this.plannerAnchor, -7); this.render(); });
-    mkBtn('Today', () => { this.plannerAnchor = startOfDay(new Date());           this.render(); }, 'primary');
-    mkBtn('▶',     () => { this.plannerAnchor = addDays(this.plannerAnchor,  7); this.render(); });
+    mkBtn('◀', () => { this.plannerAnchor = addDays(this.plannerAnchor, -7); this.render(); });
+    mkBtn('Today', () => { this.plannerAnchor = startOfDay(new Date()); this.render(); }, 'primary');
+    mkBtn('▶', () => { this.plannerAnchor = addDays(this.plannerAnchor, 7); this.render(); });
 
     let totalOpen = 0, totalDone = 0;
     const dayData = await Promise.all(days.map(async (d) => {
@@ -4711,8 +4709,8 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
     };
     [
       { key: 'planner', label: 'Planner', desc: 'Inbox, Today, Calendar, Projects.' },
-      { key: 'crm',     label: 'CRM',     desc: 'Dashboard, Pipeline, Contacts, Companies, Activities + CRM-driven Reports.' },
-      { key: 'prm',     label: 'PRM',     desc: 'Partners, Registrations, Commissions, Leads, Certifications, Analytics + Partner reports.' },
+      { key: 'crm', label: 'CRM', desc: 'Dashboard, Pipeline, Contacts, Companies, Activities + CRM-driven Reports.' },
+      { key: 'prm', label: 'PRM', desc: 'Partners, Registrations, Commissions, Leads, Certifications, Analytics + Partner reports.' },
     ].forEach((m) => {
       new obsidian.Setting(containerEl)
         .setName(m.label)
@@ -4737,7 +4735,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
           this.plugin.settings.desktopNotifications = v;
           await this.plugin.saveSettings();
           if (v && typeof Notification !== 'undefined' && Notification.permission === 'default') {
-            try { await Notification.requestPermission(); } catch (_) {}
+            try { await Notification.requestPermission(); } catch (_) { }
           }
         }));
 
@@ -4748,7 +4746,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
         : `Current status: ${Notification.permission}`)
       .addButton((b) => b.setButtonText('Request permission').onClick(async () => {
         if (typeof Notification === 'undefined') return;
-        try { await Notification.requestPermission(); this.display(); } catch (_) {}
+        try { await Notification.requestPermission(); this.display(); } catch (_) { }
       }));
 
     new obsidian.Setting(containerEl)
@@ -4845,8 +4843,8 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       .setDesc('Coming soon')
       .addText((t) => {
         t.setPlaceholder('https://your-cadence-instance')
-         .setValue(this.plugin.settings.cadenceApiUrl)
-         .onChange(async (v) => { this.plugin.settings.cadenceApiUrl = v; await this.plugin.saveSettings(); });
+          .setValue(this.plugin.settings.cadenceApiUrl)
+          .onChange(async (v) => { this.plugin.settings.cadenceApiUrl = v; await this.plugin.saveSettings(); });
         t.inputEl.disabled = true;
       });
     new obsidian.Setting(containerEl)
@@ -4854,8 +4852,8 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       .setDesc('Coming soon')
       .addText((t) => {
         t.setPlaceholder('paste JWT here when sync ships')
-         .setValue(this.plugin.settings.cadenceApiToken)
-         .onChange(async (v) => { this.plugin.settings.cadenceApiToken = v; await this.plugin.saveSettings(); });
+          .setValue(this.plugin.settings.cadenceApiToken)
+          .onChange(async (v) => { this.plugin.settings.cadenceApiToken = v; await this.plugin.saveSettings(); });
         t.inputEl.disabled = true;
       });
   }
@@ -4865,6 +4863,18 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
 class CadencePlugin extends obsidian.Plugin {
   async onload() {
     await this.loadSettings();
+
+    // Ensure 'due' and 'started' are strictly recognized as Date properties in Obsidian
+    this.app.workspace.onLayoutReady(() => {
+      try {
+        if (this.app.metadataTypeManager && typeof this.app.metadataTypeManager.setType === 'function') {
+          this.app.metadataTypeManager.setType('due', 'date');
+          this.app.metadataTypeManager.setType('started', 'date');
+        }
+      } catch (e) {
+        console.warn('Cadence: Failed to register property types', e);
+      }
+    });
 
     this.registerView(
       VIEW_TYPE_CADENCE_APP,
@@ -4933,7 +4943,7 @@ class CadencePlugin extends obsidian.Plugin {
         const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CADENCE_APP)[0];
         if (leaf && leaf.view) {
           const m = String(leaf.view.mode || '');
-          if (m === 'crm.contacts')  entityKey = 'contact';
+          if (m === 'crm.contacts') entityKey = 'contact';
           else if (m === 'crm.companies') entityKey = 'company';
           else if (m === 'crm.activities') entityKey = 'activity';
           else if (m === 'crm.pipeline') entityKey = 'deal';
@@ -5095,7 +5105,7 @@ class CadencePlugin extends obsidian.Plugin {
         if (Notification.permission === 'granted') {
           new Notification('Cadence reminder', { body: r.text });
         }
-      } catch (_) {}
+      } catch (_) { }
     }
   }
 
