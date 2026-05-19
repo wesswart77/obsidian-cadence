@@ -1429,7 +1429,7 @@ class CadenceEntityCreateModal extends obsidian.Modal {
         input = row.createEl('input', { type: 'text', cls: 'cad-create-input' });
         input.placeholder = this._placeholderFor(f, isPrimary);
 
-        if (this.entityKey === 'project' && f.key === 'owner') {
+        if (f.key === 'owner' || f.key === 'assigned') {
           row.style.position = 'relative'; // Ensure absolute positioning of suggestions works
           const suggestionsBox = row.createDiv({ cls: 'cad-pd-tag-suggestions' });
           suggestionsBox.style.position = 'absolute';
@@ -2039,6 +2039,8 @@ class CadenceAppView extends obsidian.ItemView {
             ev.preventDefault();
             this.openEntityDetail(entityKey, e.file);
           });
+        } else if (f.key === 'owner' || f.key === 'assigned') {
+          this._renderOwnerLinks(td, val, false);
         } else {
           td.setText(formatted);
         }
@@ -2172,11 +2174,207 @@ class CadenceAppView extends obsidian.ItemView {
         inp.addEventListener('input', () => debouncedWrite(f.key, inp.value));
         inp.addEventListener('blur', () => writeField(f.key, inp.value));
       } else {
-        const inp = row.createEl('input', { type: 'text', cls: 'cad-form-input' });
-        if (current) inp.value = String(current);
-        if (f.key === primaryKey) inp.placeholder = `${def.label} name`;
-        inp.addEventListener('input', () => debouncedWrite(f.key, inp.value));
-        inp.addEventListener('blur', () => writeField(f.key, inp.value));
+        if (f.key === 'owner' || f.key === 'assigned') {
+          row.style.position = 'relative';
+          const wrap = row.createDiv({ cls: 'cad-pd-tag-input-wrap' });
+          wrap.style.display = 'flex';
+          wrap.style.flexWrap = 'wrap';
+          wrap.style.gap = '6px';
+          wrap.style.alignItems = 'center';
+          wrap.style.border = '1px solid var(--border-color)';
+          wrap.style.borderRadius = '4px';
+          wrap.style.padding = '4px 8px';
+          wrap.style.minHeight = '36px';
+          wrap.style.backgroundColor = 'var(--background-primary)';
+          wrap.style.cursor = 'text';
+
+          const inp = wrap.createEl('input', { type: 'text' });
+          inp.style.border = 'none';
+          inp.style.outline = 'none';
+          inp.style.background = 'transparent';
+          inp.style.flex = '1';
+          inp.style.minWidth = '80px';
+          inp.style.color = 'var(--text-normal)';
+          inp.style.padding = '0';
+          inp.style.margin = '0';
+          inp.style.height = '24px';
+          inp.placeholder = 'Add ' + f.label.toLowerCase() + '...';
+
+          const suggestionsBox = row.createDiv({ cls: 'cad-pd-tag-suggestions' });
+          suggestionsBox.style.position = 'absolute';
+          suggestionsBox.style.zIndex = '10000';
+          suggestionsBox.style.backgroundColor = 'var(--background-secondary)';
+          suggestionsBox.style.border = '1px solid var(--border-color)';
+          suggestionsBox.style.borderRadius = '4px';
+          suggestionsBox.style.boxShadow = 'var(--shadow-s)';
+          suggestionsBox.style.maxHeight = '150px';
+          suggestionsBox.style.overflowY = 'auto';
+          suggestionsBox.style.display = 'none';
+          suggestionsBox.style.width = 'calc(100% - 150px)'; // Account for form label
+          suggestionsBox.style.boxSizing = 'border-box';
+          suggestionsBox.style.top = '100%';
+          suggestionsBox.style.right = '0';
+          suggestionsBox.style.marginTop = '4px';
+
+          let valuesList = [];
+          const cur = fm[f.key];
+          if (Array.isArray(cur)) {
+            valuesList = cur.map(v => String(v).replace(/^\[\[|\]\]$/g, '').trim()).filter(Boolean);
+          } else if (cur != null && cur !== '') {
+            valuesList = [String(cur).replace(/^\[\[|\]\]$/g, '').trim()].filter(Boolean);
+          }
+
+          const updateSuggestions = () => {
+            const query = inp.value.trim().toLowerCase();
+            suggestionsBox.empty();
+
+            const contacts = listEntities(this.app, 'contact');
+            const filtered = contacts.filter((c) =>
+              (!query || c.basename.toLowerCase().includes(query)) &&
+              !valuesList.includes(c.basename)
+            );
+
+            if (filtered.length === 0) {
+              suggestionsBox.style.display = 'none';
+              return;
+            }
+
+            filtered.forEach((c) => {
+              const item = suggestionsBox.createDiv({ cls: 'cad-suggestion-item' });
+              item.style.padding = '6px 10px';
+              item.style.cursor = 'pointer';
+              item.style.fontSize = '13px';
+              item.style.color = 'var(--text-normal)';
+              item.setText(c.basename);
+
+              item.addEventListener('mouseenter', () => {
+                item.style.backgroundColor = 'var(--background-modifier-hover)';
+              });
+              item.addEventListener('mouseleave', () => {
+                item.style.backgroundColor = 'transparent';
+              });
+              item.addEventListener('mousedown', async (ev) => {
+                ev.preventDefault();
+                await addVal(c.basename);
+                suggestionsBox.style.display = 'none';
+              });
+            });
+
+            suggestionsBox.style.display = 'block';
+          };
+
+          const renderChips = () => {
+            const existing = wrap.querySelectorAll('.cad-tag-chip');
+            existing.forEach(c => c.remove());
+
+            valuesList.forEach((valName) => {
+              const chip = wrap.createDiv({ cls: 'cad-tag-chip' });
+              chip.style.display = 'inline-flex';
+              chip.style.alignItems = 'center';
+              chip.style.gap = '6px';
+              chip.style.backgroundColor = 'var(--background-secondary, #eee)';
+              chip.style.padding = '2px 8px';
+              chip.style.borderRadius = '12px';
+              chip.style.fontSize = '12px';
+              chip.style.height = '24px';
+              chip.style.boxSizing = 'border-box';
+              chip.style.color = 'var(--text-normal)';
+
+              const link = chip.createSpan({ text: valName });
+              link.style.textDecoration = 'underline';
+              link.style.cursor = 'pointer';
+              link.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                const contactFile = this.app.vault.getMarkdownFiles().find(cFile => cFile.basename.toLowerCase() === valName.toLowerCase());
+                if (contactFile) {
+                  this.openEntityDetail('contact', contactFile);
+                } else {
+                  this.app.workspace.openLinkText(valName, '', false);
+                }
+              });
+
+              const close = chip.createSpan({ text: '×' });
+              close.style.cursor = 'pointer';
+              close.style.fontWeight = 'bold';
+              close.style.fontSize = '14px';
+              close.style.lineHeight = '1';
+              close.style.color = 'var(--text-muted)';
+              close.addEventListener('click', async (ev) => {
+                ev.stopPropagation();
+                valuesList = valuesList.filter(v => v !== valName);
+                await save();
+                renderChips();
+              });
+
+              wrap.insertBefore(chip, inp);
+            });
+          };
+
+          const save = async () => {
+            const val = valuesList.map(o => `[[${o}]]`);
+            await writeField(f.key, val);
+          };
+
+          const addVal = async (name) => {
+            name = name.trim();
+            if (!name) return;
+            if (valuesList.includes(name)) {
+              inp.value = '';
+              return;
+            }
+            valuesList.push(name);
+            inp.value = '';
+            renderChips();
+            await save();
+
+            // Auto-create contact if missing
+            const contactFile = this.app.vault.getMarkdownFiles().find(cFile => cFile.basename.toLowerCase() === name.toLowerCase());
+            if (!contactFile) {
+              try {
+                await createEntity(this.app, 'contact', name);
+                new obsidian.Notice(`Created new Contact: ${name}`);
+              } catch (e) {
+                console.warn('Failed to auto-create contact', e);
+              }
+            }
+          };
+
+          inp.addEventListener('input', updateSuggestions);
+          inp.addEventListener('focus', updateSuggestions);
+
+          inp.addEventListener('keydown', async (ev) => {
+            if (ev.key === 'Enter') {
+              ev.preventDefault();
+              await addVal(inp.value);
+              suggestionsBox.style.display = 'none';
+            } else if (ev.key === 'Backspace' && !inp.value && valuesList.length > 0) {
+              valuesList.pop();
+              await save();
+              renderChips();
+            }
+          });
+
+          inp.addEventListener('blur', async () => {
+            setTimeout(async () => {
+              suggestionsBox.style.display = 'none';
+              if (inp.value.trim()) {
+                await addVal(inp.value);
+              }
+            }, 180);
+          });
+
+          wrap.addEventListener('click', () => {
+            inp.focus();
+          });
+
+          renderChips();
+        } else {
+          const inp = row.createEl('input', { type: 'text', cls: 'cad-form-input' });
+          if (current) inp.value = String(current);
+          if (f.key === primaryKey) inp.placeholder = `${def.label} name`;
+          inp.addEventListener('input', () => debouncedWrite(f.key, inp.value));
+          inp.addEventListener('blur', () => writeField(f.key, inp.value));
+        }
       }
     });
 
@@ -2739,9 +2937,9 @@ class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  _renderOwnerLinks(parent, ownerVal) {
+  _renderOwnerLinks(parent, ownerVal, showPrefix = true) {
     if (!ownerVal) return;
-    parent.createSpan({ text: 'Owner: ' });
+    if (showPrefix) parent.createSpan({ text: 'Owner: ' });
     const arr = Array.isArray(ownerVal) ? ownerVal : [ownerVal];
     arr.forEach((v, idx) => {
       if (idx > 0) parent.createSpan({ text: ', ' });
@@ -4712,23 +4910,28 @@ class CadenceAppView extends obsidian.ItemView {
           const extras = Object.assign({}, result.values);
           delete extras[primaryKey];
 
-          if (entityKey === 'project' && extras.owner) {
-            const names = String(extras.owner).split(',').map(n => n.replace(/^\[\[|\]\]$/g, '').trim()).filter(Boolean);
-            extras.owner = names.map(n => `[[${n}]]`);
+          const parseAndCreateField = async (key) => {
+            if (extras[key]) {
+              const names = String(extras[key]).split(',').map(n => n.replace(/^\[\[|\]\]$/g, '').trim()).filter(Boolean);
+              extras[key] = names.map(n => `[[${n}]]`);
 
-            // Auto-create missing contacts
-            for (const name of names) {
-              const contactFile = this.app.vault.getMarkdownFiles().find(f => f.basename.toLowerCase() === name.toLowerCase());
-              if (!contactFile) {
-                try {
-                  await createEntity(this.app, 'contact', name);
-                  new obsidian.Notice(`Created new Contact: ${name}`);
-                } catch (e) {
-                  console.warn('Failed to auto-create contact', e);
+              // Auto-create missing contacts
+              for (const name of names) {
+                const contactFile = this.app.vault.getMarkdownFiles().find(f => f.basename.toLowerCase() === name.toLowerCase());
+                if (!contactFile) {
+                  try {
+                    await createEntity(this.app, 'contact', name);
+                    new obsidian.Notice(`Created new Contact: ${name}`);
+                  } catch (e) {
+                    console.warn('Failed to auto-create contact', e);
+                  }
                 }
               }
             }
-          }
+          };
+
+          await parseAndCreateField('owner');
+          await parseAndCreateField('assigned');
 
           if (Object.keys(extras).length) {
             await this.app.fileManager.processFrontMatter(file, (fm) => {
