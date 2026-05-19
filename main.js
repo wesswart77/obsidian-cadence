@@ -90,13 +90,14 @@ const ENTITIES = {
     label: 'Contact', plural: 'Contacts',
     fields: [
       { key: 'name', label: 'Name', primary: true },
-      { key: 'email', label: 'Email', type: 'email' },
-      { key: 'company', label: 'Company' },
-      { key: 'role', label: 'Role' },
+      { key: 'email', label: 'Email', type: 'email', isList: true },
+      { key: 'phone', label: 'Phone', isList: true },
+      { key: 'company', label: 'Company', isList: true },
+      { key: 'role', label: 'Role', isList: true },
       { key: 'lastContact', label: 'Last contact', type: 'date' },
       { key: 'tags', label: 'Tags', type: 'tags' },
     ],
-    columns: ['name', 'company', 'email', 'role', 'lastContact'],
+    columns: ['name', 'company', 'email', 'phone', 'role', 'lastContact'],
   },
   company: {
     folder: 'Cadence/Companies',
@@ -427,7 +428,7 @@ function entityTemplate(entityKey, name) {
 
   def.fields.forEach((f) => {
     if (f.key === def.fields[0].key) lines.push(`${f.key}: ${name}`);
-    else if (f.type === 'tags') lines.push(`${f.key}: []`);
+    else if (f.type === 'tags' || f.isList) lines.push(`${f.key}: []`);
     else if (f.type === 'number' || f.type === 'currency') lines.push(`${f.key}: 0`);
     else lines.push(`${f.key}:`);
   });
@@ -4872,6 +4873,11 @@ class CadencePlugin extends obsidian.Plugin {
           this.app.metadataTypeManager.setType('started', 'date');
           this.app.metadataTypeManager.setType('status', 'multitext');
           this.app.metadataTypeManager.setType('priority', 'multitext');
+          this.app.metadataTypeManager.setType('email', 'multitext');
+          this.app.metadataTypeManager.setType('company', 'multitext');
+          this.app.metadataTypeManager.setType('role', 'multitext');
+          this.app.metadataTypeManager.setType('phone', 'multitext');
+          this.app.metadataTypeManager.setType('lastContact', 'date');
         }
       } catch (e) {
         console.warn('Cadence: Failed to register property types', e);
