@@ -1663,73 +1663,85 @@ select.cad-form-input { appearance: auto; padding-right: 28px; }
   .cad-mobile-backdrop { display: block; }
   .cad-mobile-nav-open .cad-mobile-backdrop { opacity: 1; pointer-events: auto; }
 
-  .cad-home-cols, .cad-pd-cols, .cad-dash-cols {
-    grid-template-columns: 1fr !important;
-    padding-left: 16px !important;
-    padding-right: 16px !important;
+  /* Specificity bump via `.cadence-app` prefix instead of !important.
+     The original rules elsewhere in this file are at (0,2,0) — e.g.
+     `.cadence-home .cad-home-cols`. Prefixing with `.cadence-app` makes
+     our mobile overrides (0,2,0) AND they come later in source order,
+     so they win cleanly. */
+  .cadence-app .cad-home-cols,
+  .cadence-app .cad-pd-cols,
+  .cadence-app .cad-dash-cols {
+    grid-template-columns: 1fr;
+    padding-left: 16px;
+    padding-right: 16px;
   }
-  .cad-pd-meta { grid-template-columns: 1fr !important; }
+  .cadence-app .cad-pd-meta { grid-template-columns: 1fr; }
 
-  .cad-page-header { padding: 18px 16px 12px 16px; flex-direction: column; align-items: flex-start; }
-  .cad-page-title  { font-size: 22px; line-height: 28px; }
-  .cad-page-header-right { width: 100%; flex-wrap: wrap; margin-top: 8px; }
+  .cadence-app .cad-page-header { padding: 18px 16px 12px 16px; flex-direction: column; align-items: flex-start; }
+  .cadence-app .cad-page-title  { font-size: 22px; line-height: 28px; }
+  .cadence-app .cad-page-header-right { width: 100%; flex-wrap: wrap; margin-top: 8px; }
 
-  .cad-section-label-lg { padding-left: 16px; padding-right: 16px; }
-  .cad-stat-grid { padding: 16px; gap: 8px; grid-template-columns: 1fr 1fr; }
-  .cad-stat-value { font-size: 24px; }
-  .cad-table-wrap { padding-left: 16px; padding-right: 16px; }
-  .cad-kanban-board { padding-left: 16px; padding-right: 16px; }
-  .cad-pt-wrap { padding-left: 16px; padding-right: 16px; grid-template-columns: 1fr; }
-  .cad-dash-list { padding-left: 16px; padding-right: 16px; }
-  .cad-bar-chart { padding-left: 16px; padding-right: 16px; }
-  .cad-stage-bars { padding-left: 16px; padding-right: 16px; }
-  .cad-stage-bar-row { grid-template-columns: 90px 28px 1fr 80px; gap: 8px; }
+  .cadence-app .cad-section-label-lg { padding-left: 16px; padding-right: 16px; }
+  .cadence-app .cad-stat-grid { padding: 16px; gap: 8px; grid-template-columns: 1fr 1fr; }
+  .cadence-app .cad-stat-value { font-size: 24px; }
+  .cadence-app .cad-table-wrap { padding-left: 16px; padding-right: 16px; }
+  .cadence-app .cad-kanban-board { padding-left: 16px; padding-right: 16px; }
+  .cadence-app .cad-pt-wrap { padding-left: 16px; padding-right: 16px; grid-template-columns: 1fr; }
+  .cadence-app .cad-dash-list { padding-left: 16px; padding-right: 16px; }
+  .cadence-app .cad-bar-chart { padding-left: 16px; padding-right: 16px; }
+  .cadence-app .cad-stage-bars { padding-left: 16px; padding-right: 16px; }
+  .cadence-app .cad-stage-bar-row { grid-template-columns: 90px 28px 1fr 80px; gap: 8px; }
 
-  .cad-briefing { margin: 14px 16px 0 16px; padding: 14px 16px; }
-  .cad-briefing-headline { font-size: 15px; }
-  .cad-briefing-row { font-size: 13px; }
+  .cadence-app .cad-briefing { margin: 14px 16px 0 16px; padding: 14px 16px; }
+  .cadence-app .cad-briefing-headline { font-size: 15px; }
+  .cadence-app .cad-briefing-row { font-size: 13px; }
 
-  .cadence-today { padding: 22px 16px; }
-  .cadence-today .cad-day { font-size: 72px !important; }
-  .cadence-today .cad-month { font-size: 16px !important; }
+  .cadence-app .cadence-today { padding: 22px 16px; }
+  .cadence-app .cadence-today .cad-day { font-size: 72px; }
+  .cadence-app .cadence-today .cad-month { font-size: 16px; }
 
-  .cad-inbox-row { flex-wrap: wrap; gap: 10px; padding: 12px 14px; }
-  .cad-inbox-actions { width: 100%; justify-content: flex-end; }
+  .cadence-app .cad-inbox-row { flex-wrap: wrap; gap: 10px; padding: 12px 14px; }
+  .cadence-app .cad-inbox-actions { width: 100%; justify-content: flex-end; }
 
-  .cad-btn { padding: 9px 14px; font-size: 14px; min-height: 36px; }
-  .cad-btn.cad-btn-sm { padding: 7px 12px; font-size: 13px; }
+  .cadence-app .cad-btn { padding: 9px 14px; font-size: 14px; min-height: 36px; }
+  .cadence-app .cad-btn.cad-btn-sm { padding: 7px 12px; font-size: 13px; }
 
-  .cad-create-modal,
-  .cad-import-modal,
-  .cad-capture-modal {
-    min-width: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    padding: 20px 18px 14px 18px !important;
+  /* Modals are rendered outside `.cadence-app` (Obsidian's modal container),
+     so we can't reach them by prefix. Chain the class to itself to bump
+     specificity from (0,1,0) to (0,2,0) without !important. */
+  .cad-create-modal.cad-create-modal,
+  .cad-import-modal.cad-import-modal,
+  .cad-capture-modal.cad-capture-modal {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 20px 18px 14px 18px;
   }
-  .cad-create-row,
-  .cad-import-modal .cad-create-row {
-    grid-template-columns: 1fr !important;
-    gap: 6px !important;
-    align-items: stretch !important;
+  .cad-create-modal.cad-create-modal .cad-create-row,
+  .cad-import-modal.cad-import-modal .cad-create-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    align-items: stretch;
   }
-  .cad-import-table-wrap { max-height: 240px; }
-  .cad-form-row { flex-direction: column; align-items: stretch !important; }
+  .cad-import-modal .cad-import-table-wrap { max-height: 240px; }
+  .cad-capture-modal.cad-capture-modal .cad-form-row { flex-direction: column; align-items: stretch; }
 }
 
 @media (max-width: 380px) {
-  .cad-stat-grid { grid-template-columns: 1fr; }
-  .cad-page-title { font-size: 20px; }
-  .cad-briefing { padding: 12px 14px; }
+  .cadence-app .cad-stat-grid { grid-template-columns: 1fr; }
+  .cadence-app .cad-page-title { font-size: 20px; }
+  .cadence-app .cad-briefing { padding: 12px 14px; }
 }
 
 @media (hover: none) {
-  .cad-pd-mile-row .cad-btn-danger,
-  .cad-pd-task-row .cad-btn-danger,
-  .cad-pd-task-bell,
-  .cad-pt-bell,
-  .cad-task-link-btn,
-  .cad-home-task .cad-task-link-btn { opacity: 1 !important; }
+  /* `.cadence-app` prefix bumps these to (0,2,0) so they outrank the
+     base 1-class hover rules without needing !important. */
+  .cadence-app .cad-pd-mile-row .cad-btn-danger,
+  .cadence-app .cad-pd-task-row .cad-btn-danger,
+  .cadence-app .cad-pd-task-bell,
+  .cadence-app .cad-pt-bell,
+  .cadence-app .cad-task-link-btn,
+  .cadence-app .cad-home-task .cad-task-link-btn { opacity: 1; }
 }
 
 /* iOS safe-area insets — horizontal + bottom only (Obsidian handles top) */
