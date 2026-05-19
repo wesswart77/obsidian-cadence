@@ -1429,7 +1429,7 @@ class CadenceEntityCreateModal extends obsidian.Modal {
         input = row.createEl('input', { type: 'text', cls: 'cad-create-input' });
         input.placeholder = this._placeholderFor(f, isPrimary);
 
-        if (f.key === 'owner' || f.key === 'assigned' || f.key === 'company') {
+        if (f.key === 'owner' || f.key === 'assigned' || f.key === 'company' || f.key === 'contact' || f.key === 'contacts' || f.key === 'partner') {
           row.style.position = 'relative'; // Ensure absolute positioning of suggestions works
           const suggestionsBox = row.createDiv({ cls: 'cad-pd-tag-suggestions' });
           suggestionsBox.style.position = 'absolute';
@@ -1458,7 +1458,7 @@ class CadenceEntityCreateModal extends obsidian.Modal {
               return;
             }
 
-            const targetKey = f.key === 'company' ? 'company' : 'contact';
+            const targetKey = f.key === 'company' ? 'company' : (f.key === 'partner' ? 'partner' : 'contact');
             const entitiesList = listEntities(this.app, targetKey);
             const typedNames = fullVal.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 
@@ -2181,9 +2181,8 @@ class CadenceAppView extends obsidian.ItemView {
         inp.addEventListener('input', () => debouncedWrite(f.key, inp.value));
         inp.addEventListener('blur', () => writeField(f.key, inp.value));
       } else {
-        if (f.key === 'owner' || f.key === 'assigned' || f.key === 'company') {
-          const isCompanyField = f.key === 'company';
-          const targetEntityKey = isCompanyField ? 'company' : 'contact';
+        if (f.key === 'owner' || f.key === 'assigned' || f.key === 'company' || f.key === 'contact' || f.key === 'contacts' || f.key === 'partner') {
+          const targetEntityKey = f.key === 'company' ? 'company' : (f.key === 'partner' ? 'partner' : 'contact');
           row.style.position = 'relative';
           const wrap = row.createDiv({ cls: 'cad-pd-tag-input-wrap' });
           wrap.style.display = 'flex';
@@ -2336,12 +2335,13 @@ class CadenceAppView extends obsidian.ItemView {
             renderChips();
             await save();
 
-            // Auto-create contact/company if missing
+            // Auto-create contact/company/partner if missing
             const targetFile = this.app.vault.getMarkdownFiles().find(cFile => cFile.basename.toLowerCase() === name.toLowerCase());
             if (!targetFile) {
               try {
                 await createEntity(this.app, targetEntityKey, name);
-                new obsidian.Notice(`Created new ${isCompanyField ? 'Company' : 'Contact'}: ${name}`);
+                const label = targetEntityKey === 'company' ? 'Company' : (targetEntityKey === 'partner' ? 'Partner' : 'Contact');
+                new obsidian.Notice(`Created new ${label}: ${name}`);
               } catch (e) {
                 console.warn(`Failed to auto-create ${targetEntityKey}`, e);
               }
@@ -4934,7 +4934,8 @@ class CadenceAppView extends obsidian.ItemView {
                 if (!targetFile) {
                   try {
                     await createEntity(this.app, targetEntity, name);
-                    new obsidian.Notice(`Created new ${targetEntity === 'company' ? 'Company' : 'Contact'}: ${name}`);
+                    const label = targetEntity === 'company' ? 'Company' : (targetEntity === 'partner' ? 'Partner' : 'Contact');
+                    new obsidian.Notice(`Created new ${label}: ${name}`);
                   } catch (e) {
                     console.warn(`Failed to auto-create ${targetEntity}`, e);
                   }
@@ -4946,6 +4947,9 @@ class CadenceAppView extends obsidian.ItemView {
           await parseAndCreateField('owner', 'contact');
           await parseAndCreateField('assigned', 'contact');
           await parseAndCreateField('company', 'company');
+          await parseAndCreateField('contact', 'contact');
+          await parseAndCreateField('contacts', 'contact');
+          await parseAndCreateField('partner', 'partner');
 
           if (Object.keys(extras).length) {
             await this.app.fileManager.processFrontMatter(file, (fm) => {
