@@ -446,8 +446,8 @@ function projectTemplate(name) {
     '---',
     'type: project',
     `name: ${name}`,
-    'status: active',
-    'priority: medium',
+    'status: [active]',
+    'priority: [medium]',
     'owner: []',
     `started: ${today}`,
     'due:',
@@ -4864,12 +4864,14 @@ class CadencePlugin extends obsidian.Plugin {
   async onload() {
     await this.loadSettings();
 
-    // Ensure 'due' and 'started' are strictly recognized as Date properties in Obsidian
+    // Ensure property types are strictly recognized in Obsidian
     this.app.workspace.onLayoutReady(() => {
       try {
         if (this.app.metadataTypeManager && typeof this.app.metadataTypeManager.setType === 'function') {
           this.app.metadataTypeManager.setType('due', 'date');
           this.app.metadataTypeManager.setType('started', 'date');
+          this.app.metadataTypeManager.setType('status', 'multitext');
+          this.app.metadataTypeManager.setType('priority', 'multitext');
         }
       } catch (e) {
         console.warn('Cadence: Failed to register property types', e);
