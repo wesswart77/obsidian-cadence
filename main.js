@@ -1429,7 +1429,7 @@ class CadenceEntityCreateModal extends obsidian.Modal {
         input = row.createEl('input', { type: 'text', cls: 'cad-create-input' });
         input.placeholder = this._placeholderFor(f, isPrimary);
 
-        if (f.key === 'owner' || f.key === 'assigned') {
+        if (f.key === 'owner' || f.key === 'assigned' || f.key === 'company') {
           row.style.position = 'relative'; // Ensure absolute positioning of suggestions works
           const suggestionsBox = row.createDiv({ cls: 'cad-pd-tag-suggestions' });
           suggestionsBox.style.position = 'absolute';
@@ -1458,10 +1458,11 @@ class CadenceEntityCreateModal extends obsidian.Modal {
               return;
             }
 
-            const contacts = listEntities(this.app, 'contact');
+            const targetKey = f.key === 'company' ? 'company' : 'contact';
+            const entitiesList = listEntities(this.app, targetKey);
             const typedNames = fullVal.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 
-            const filtered = contacts.filter((c) =>
+            const filtered = entitiesList.filter((c) =>
               c.basename.toLowerCase().includes(query) &&
               !typedNames.includes(c.basename.toLowerCase())
             );
@@ -2041,6 +2042,12 @@ class CadenceAppView extends obsidian.ItemView {
           });
         } else if (f.key === 'owner' || f.key === 'assigned') {
           this._renderOwnerLinks(td, val, false);
+        } else if (f.key === 'company') {
+          this._renderEntityLinks(td, val, 'company');
+        } else if (f.key === 'partner') {
+          this._renderEntityLinks(td, val, 'partner');
+        } else if (f.key === 'contact' || f.key === 'contacts') {
+          this._renderEntityLinks(td, val, 'contact');
         } else {
           td.setText(formatted);
         }
@@ -2174,7 +2181,9 @@ class CadenceAppView extends obsidian.ItemView {
         inp.addEventListener('input', () => debouncedWrite(f.key, inp.value));
         inp.addEventListener('blur', () => writeField(f.key, inp.value));
       } else {
-        if (f.key === 'owner' || f.key === 'assigned') {
+        if (f.key === 'owner' || f.key === 'assigned' || f.key === 'company') {
+          const isCompanyField = f.key === 'company';
+          const targetEntityKey = isCompanyField ? 'company' : 'contact';
           row.style.position = 'relative';
           const wrap = row.createDiv({ cls: 'cad-pd-tag-input-wrap' });
           wrap.style.display = 'flex';
@@ -2228,8 +2237,8 @@ class CadenceAppView extends obsidian.ItemView {
             const query = inp.value.trim().toLowerCase();
             suggestionsBox.empty();
 
-            const contacts = listEntities(this.app, 'contact');
-            const filtered = contacts.filter((c) =>
+            const targetEntities = listEntities(this.app, targetEntityKey);
+            const filtered = targetEntities.filter((c) =>
               (!query || c.basename.toLowerCase().includes(query)) &&
               !valuesList.includes(c.basename)
             );
@@ -2285,9 +2294,9 @@ class CadenceAppView extends obsidian.ItemView {
               link.style.cursor = 'pointer';
               link.addEventListener('click', (ev) => {
                 ev.stopPropagation();
-                const contactFile = this.app.vault.getMarkdownFiles().find(cFile => cFile.basename.toLowerCase() === valName.toLowerCase());
-                if (contactFile) {
-                  this.openEntityDetail('contact', contactFile);
+                const targetFile = this.app.vault.getMarkdownFiles().find(cFile => cFile.basename.toLowerCase() === valName.toLowerCase());
+                if (targetFile) {
+                  this.openEntityDetail(targetEntityKey, targetFile);
                 } else {
                   this.app.workspace.openLinkText(valName, '', false);
                 }
@@ -2327,14 +2336,14 @@ class CadenceAppView extends obsidian.ItemView {
             renderChips();
             await save();
 
-            // Auto-create contact if missing
-            const contactFile = this.app.vault.getMarkdownFiles().find(cFile => cFile.basename.toLowerCase() === name.toLowerCase());
-            if (!contactFile) {
+            // Auto-create contact/company if missing
+            const targetFile = this.app.vault.getMarkdownFiles().find(cFile => cFile.basename.toLowerCase() === name.toLowerCase());
+            if (!targetFile) {
               try {
-                await createEntity(this.app, 'contact', name);
-                new obsidian.Notice(`Created new Contact: ${name}`);
+                await createEntity(this.app, targetEntityKey, name);
+                new obsidian.Notice(`Created new ${isCompanyField ? 'Company' : 'Contact'}: ${name}`);
               } catch (e) {
-                console.warn('Failed to auto-create contact', e);
+                console.warn(`Failed to auto-create ${targetEntityKey}`, e);
               }
             }
           };
@@ -2937,27 +2946,31 @@ class CadenceAppView extends obsidian.ItemView {
     });
   }
 
-  _renderOwnerLinks(parent, ownerVal, showPrefix = true) {
-    if (!ownerVal) return;
-    if (showPrefix) parent.createSpan({ text: 'Owner: ' });
-    const arr = Array.isArray(ownerVal) ? ownerVal : [ownerVal];
+  _renderEntityLinks(parent, val, targetEntityKey, prefix = '') {
+    if (!val) return;
+    if (prefix) parent.createSpan({ text: prefix });
+    const arr = Array.isArray(val) ? val : [val];
     arr.forEach((v, idx) => {
       if (idx > 0) parent.createSpan({ text: ', ' });
       const raw = String(v);
       const clean = raw.replace(/^\[\[|\]\]$/g, '');
-      const link = parent.createEl('a', { text: clean, cls: 'cad-owner-link' });
+      const link = parent.createEl('a', { text: clean, cls: `cad-${targetEntityKey}-link` });
       link.style.textDecoration = 'underline';
       link.style.cursor = 'pointer';
       link.addEventListener('click', (ev) => {
-        ev.preventDefault();
-        const contactFile = this.app.vault.getMarkdownFiles().find(f => f.basename.toLowerCase() === clean.toLowerCase());
-        if (contactFile) {
-          this.openEntityDetail('contact', contactFile);
+        ev.stopPropagation();
+        const targetFile = this.app.vault.getMarkdownFiles().find(f => f.basename.toLowerCase() === clean.toLowerCase());
+        if (targetFile) {
+          this.openEntityDetail(targetEntityKey, targetFile);
         } else {
           this.app.workspace.openLinkText(clean, '', false);
         }
       });
     });
+  }
+
+  _renderOwnerLinks(parent, ownerVal, showPrefix = true) {
+    this._renderEntityLinks(parent, ownerVal, 'contact', showPrefix ? 'Owner: ' : '');
   }
 
   async _writeProjectFrontmatter(file, patch, flashSaved) {
@@ -4910,28 +4923,29 @@ class CadenceAppView extends obsidian.ItemView {
           const extras = Object.assign({}, result.values);
           delete extras[primaryKey];
 
-          const parseAndCreateField = async (key) => {
+          const parseAndCreateField = async (key, targetEntity = 'contact') => {
             if (extras[key]) {
               const names = String(extras[key]).split(',').map(n => n.replace(/^\[\[|\]\]$/g, '').trim()).filter(Boolean);
               extras[key] = names.map(n => `[[${n}]]`);
 
-              // Auto-create missing contacts
+              // Auto-create missing target entity
               for (const name of names) {
-                const contactFile = this.app.vault.getMarkdownFiles().find(f => f.basename.toLowerCase() === name.toLowerCase());
-                if (!contactFile) {
+                const targetFile = this.app.vault.getMarkdownFiles().find(f => f.basename.toLowerCase() === name.toLowerCase());
+                if (!targetFile) {
                   try {
-                    await createEntity(this.app, 'contact', name);
-                    new obsidian.Notice(`Created new Contact: ${name}`);
+                    await createEntity(this.app, targetEntity, name);
+                    new obsidian.Notice(`Created new ${targetEntity === 'company' ? 'Company' : 'Contact'}: ${name}`);
                   } catch (e) {
-                    console.warn('Failed to auto-create contact', e);
+                    console.warn(`Failed to auto-create ${targetEntity}`, e);
                   }
                 }
               }
             }
           };
 
-          await parseAndCreateField('owner');
-          await parseAndCreateField('assigned');
+          await parseAndCreateField('owner', 'contact');
+          await parseAndCreateField('assigned', 'contact');
+          await parseAndCreateField('company', 'company');
 
           if (Object.keys(extras).length) {
             await this.app.fileManager.processFrontMatter(file, (fm) => {
