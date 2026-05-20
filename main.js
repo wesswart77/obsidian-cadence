@@ -2397,6 +2397,60 @@ class CadenceAppView extends obsidian.ItemView {
     openBody.addEventListener('click', () => this.app.workspace.openLinkText(file.path, '', false));
   }
 
+  _renderEntityTable(parent, entityKey, filteredList, columns) {
+    const def = ENTITIES[entityKey];
+    if (!def) return;
+
+    const tableWrap = parent.createDiv({ cls: 'cad-table-wrap' });
+    tableWrap.style.padding = '0';
+    tableWrap.style.border = 'none';
+    tableWrap.style.boxShadow = 'none';
+    tableWrap.style.borderRadius = '0';
+    tableWrap.style.marginTop = '0';
+    tableWrap.style.overflowX = 'auto';
+
+    const table = tableWrap.createEl('table', { cls: 'cad-table' });
+    const cols = columns.map((k) => def.fields.find((f) => f.key === k)).filter(Boolean);
+
+    const thead = table.createEl('thead');
+    const trh = thead.createEl('tr');
+    cols.forEach((f) => trh.createEl('th', { text: f.label }));
+
+    const tbody = table.createEl('tbody');
+    filteredList.forEach((e) => {
+      const tr = tbody.createEl('tr', { cls: 'cad-row' });
+      cols.forEach((f, i) => {
+        const td = tr.createEl('td');
+        const val = entityValue(e, f.key, def);
+        const formatted = fmtValue(val, f.type);
+        if (i === 0) {
+          const a = td.createEl('a', { cls: 'cad-row-primary', text: formatted || e.basename });
+          a.style.fontWeight = 'bold';
+          a.style.textDecoration = 'underline';
+          a.style.cursor = 'pointer';
+          a.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            this.openEntityDetail(entityKey, e.file);
+          });
+        } else if (f.key === 'owner' || f.key === 'assigned') {
+          this._renderOwnerLinks(td, val, false);
+        } else if (f.key === 'company') {
+          this._renderEntityLinks(td, val, 'company');
+        } else if (f.key === 'partner') {
+          this._renderEntityLinks(td, val, 'partner');
+        } else if (f.key === 'contact' || f.key === 'contacts') {
+          this._renderEntityLinks(td, val, 'contact');
+        } else if (f.key === 'stage' && val) {
+          const span = td.createSpan({ cls: `cad-pill cad-pill-${val.toLowerCase()}`, text: formatted });
+          span.style.fontSize = '10px';
+          span.style.padding = '2px 6px';
+        } else {
+          td.setText(formatted || '—');
+        }
+      });
+    });
+  }
+
   async renderCompanyDetail(root, file) {
     root.addClass('cadence-project-detail');
     const def = ENTITIES.company;
@@ -2721,48 +2775,7 @@ class CadenceAppView extends obsidian.ItemView {
     if (!contacts.length) {
       contactsList.createDiv({ cls: 'cad-empty', text: 'No contacts associated yet.' });
     } else {
-      const tableWrap = contactsList.createDiv({ cls: 'cad-list-wrap' });
-      tableWrap.style.marginTop = '0';
-      tableWrap.style.boxShadow = 'none';
-      tableWrap.style.border = 'none';
-      tableWrap.style.borderRadius = '0';
-      tableWrap.style.overflowX = 'auto';
-
-      const table = tableWrap.createEl('table', { cls: 'cad-table' });
-      const thead = table.createEl('thead');
-      const trh = thead.createEl('tr');
-      trh.createEl('th', { text: 'Name' });
-      trh.createEl('th', { text: 'Role' });
-      trh.createEl('th', { text: 'Email' });
-      trh.createEl('th', { text: 'Phone' });
-      trh.createEl('th', { text: 'Last Contact' });
-
-      const tbody = table.createEl('tbody');
-      contacts.forEach(c => {
-        const tr = tbody.createEl('tr', { cls: 'cad-row' });
-        const cache = this.app.metadataCache.getFileCache(c.file) || {};
-        const fm = cache.frontmatter || {};
-
-        // Name
-        const tdName = tr.createEl('td');
-        const nameLink = tdName.createEl('a', { text: c.basename, cls: 'cad-row-primary' });
-        nameLink.style.fontWeight = 'bold';
-        nameLink.style.textDecoration = 'underline';
-        nameLink.style.cursor = 'pointer';
-        nameLink.addEventListener('click', () => this.openEntityDetail('contact', c.file));
-
-        // Role
-        tr.createEl('td', { text: fm.role || '—' });
-
-        // Email
-        tr.createEl('td', { text: fm.email || '—' });
-
-        // Phone
-        tr.createEl('td', { text: fm.phone || '—' });
-
-        // Last Contact
-        tr.createEl('td', { text: fm.lastContact ? fmtValue(fm.lastContact, 'date') : '—' });
-      });
+      this._renderEntityTable(contactsList, 'contact', contacts, ['name', 'email', 'phone', 'role', 'lastContact']);
     }
 
     /* ── 2. Pipelines / Deals Card (Right Column) ── */
@@ -2775,36 +2788,11 @@ class CadenceAppView extends obsidian.ItemView {
     });
 
     const dealsList = dealsCard.createDiv({ cls: 'cad-pd-checklist' });
+    dealsList.style.padding = '0';
     if (!deals.length) {
       dealsList.createDiv({ cls: 'cad-empty', text: 'No pipeline deals associated.' });
     } else {
-      deals.forEach(d => {
-        const row = dealsList.createDiv({ cls: 'cad-pd-mile-row' });
-        row.style.justifyContent = 'space-between';
-        row.style.padding = '8px 12px';
-        row.style.borderBottom = '1px solid var(--border-color)';
-
-        const leftSide = row.createDiv();
-        const dealLink = leftSide.createEl('a', { text: d.basename, cls: 'cad-row-primary' });
-        dealLink.style.fontWeight = 'bold';
-        dealLink.style.textDecoration = 'underline';
-        dealLink.style.cursor = 'pointer';
-        dealLink.addEventListener('click', () => this.openEntityDetail('deal', d.file));
-
-        const cache = this.app.metadataCache.getFileCache(d.file) || {};
-        const fm = cache.frontmatter || {};
-        if (fm.stage) {
-          const stageBadge = leftSide.createSpan({ text: fm.stage, cls: `cad-pill cad-pill-${fm.stage.toLowerCase()}` });
-          stageBadge.style.marginLeft = '8px';
-          stageBadge.style.fontSize = '10px';
-          stageBadge.style.padding = '2px 6px';
-        }
-
-        const rightSide = row.createDiv();
-        if (fm.value) {
-          rightSide.createSpan({ text: fmtValue(fm.value, 'currency'), cls: 'cad-deal-value' });
-        }
-      });
+      this._renderEntityTable(dealsList, 'deal', deals, ['title', 'stage', 'value', 'closeBy']);
     }
 
     /* ── 3. Activities Card (Right Column) ── */
@@ -2818,43 +2806,11 @@ class CadenceAppView extends obsidian.ItemView {
     });
 
     const actList = actCard.createDiv({ cls: 'cad-pd-checklist' });
+    actList.style.padding = '0';
     if (!activities.length) {
       actList.createDiv({ cls: 'cad-empty', text: 'No activities logged.' });
     } else {
-      activities.forEach(a => {
-        const row = actList.createDiv({ cls: 'cad-pd-mile-row' });
-        row.style.justifyContent = 'space-between';
-        row.style.padding = '8px 12px';
-        row.style.borderBottom = '1px solid var(--border-color)';
-
-        const leftSide = row.createDiv();
-        const cache = this.app.metadataCache.getFileCache(a.file) || {};
-        const fm = cache.frontmatter || {};
-
-        let icon = '📝';
-        if (fm.type === 'Call') icon = '📞';
-        else if (fm.type === 'Email') icon = '✉️';
-        else if (fm.type === 'Meeting') icon = '🤝';
-        else if (fm.type === 'Task') icon = '✅';
-
-        leftSide.createSpan({ text: icon + ' ' });
-        const actLink = leftSide.createEl('a', { text: a.basename, cls: 'cad-row-primary' });
-        actLink.style.fontWeight = '500';
-        actLink.style.textDecoration = 'underline';
-        actLink.style.cursor = 'pointer';
-        actLink.addEventListener('click', () => this.openEntityDetail('activity', a.file));
-
-        if (fm.with) {
-          leftSide.createSpan({ text: ` with ${fm.with}`, cls: 'cad-text-muted' });
-        }
-
-        const rightSide = row.createDiv();
-        rightSide.style.fontSize = '12px';
-        rightSide.style.color = 'var(--text-muted)';
-        if (fm.when) {
-          rightSide.createSpan({ text: fmtValue(fm.when, 'date') });
-        }
-      });
+      this._renderEntityTable(actList, 'activity', activities, ['when', 'type', 'subject', 'with', 'related']);
     }
   }
 
