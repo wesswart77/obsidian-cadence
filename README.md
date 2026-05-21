@@ -105,6 +105,42 @@ Settings → Cadence:
 
 ---
 
+## Customizing Entity Properties
+
+Cadence lets you define custom frontmatter properties for any of your core entities (**Contact, Company, Project, Deal, Activity, Partner, etc.**) to model your specific business workflows directly inside Obsidian.
+
+Settings → Cadence → **Custom Entities Properties**:
+
+### 1. Custom Property Types
+* **`text`** — Standard text input field.
+* **`multitext`** — Chip-based multi-select tag input.
+* **`enum`** — Dropdown menu with custom option lists.
+* **`date`** — Native calendar date selector.
+* **`tags`** — Tag chips synced directly with Obsidian's global tag index.
+* **`currency`** — Automated financial values formatted according to your selected active currency.
+
+### 2. Autocomplete & Suggestion Sources
+List properties (`multitext`) can pull autocomplete suggestions dynamically from:
+* **`folder:Path/To/Folder`** — Dynamically scans the specified vault folder. Suggests existing note basenames (e.g. `folder:Cadence/Contacts` maps contacts).
+* **`history`** — Scans your existing notes to suggest any values previously entered.
+* **`tags`** — Pulls tags directly from Obsidian's global cache.
+* **`none`** — Simple custom list inputs without suggestions.
+
+### 3. Background Entity Auto-Creation
+When a property has a suggestion source pointing to a vault folder (e.g. `folder:Cadence/Contacts` or `folder:Cadence/Shared`), **Cadence automatically creates the referenced note in the background** when you assign a new name. It formats the link as a native Obsidian `[[Wikilink]]` and populates the frontmatter immediately, saving manual overhead.
+
+### 4. Loop-Safe Bidirectional Sync
+Core relationships (like **Project** ↔ **Contact**) are bidirectionally synchronized between frontmatter sheets in a loop-safe manner:
+* Assigning a contact to a project's `owner` property automatically adds the project to that contact's `project` property.
+* **Symmetric Removals:** Clearing a project from a contact's sheet or a contact from a project's properties instantly dissociates them on both sides.
+* **Physical Deletion Sync:** Deleting a Project note entirely triggers a vault-wide background cleanup that removes all stale references from your Contacts' frontmatter automatically.
+
+### 5. Drag-and-Drop Reordering & System Locks
+* **Visual Reordering:** Use the grab handle (`⋮⋮`) to drag-and-drop properties to rearrange their visual layout order inside detail sheets and lists.
+* **System Locks (`🔒`) :** Critical properties required for Cadence's system engines (such as the Primary field, Type, or Status) are secured. Reordering attempts that shift a locked field from its original index are safely rejected to preserve layout integrity.
+
+---
+
 ## Hotkeys
 
 | Action | Shortcut |
