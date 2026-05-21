@@ -65,6 +65,7 @@ const NAV_GROUPS = [
       { id: 'reports.partners', label: 'Partners', icon: 'handshake', module: 'prm', desc: 'Partner contribution — sourced vs influenced revenue, top tiers.' },
       { id: 'reports.activity', label: 'Activity', icon: 'pie-chart', module: 'crm', desc: 'Activity mix — calls, meetings, emails by rep and account.' },
       { id: 'reports.productivity', label: 'Productivity', icon: 'sun', desc: 'Personal productivity — completion rate, streaks, focus blocks, journal volume.' },
+      { id: 'reports.graph', label: 'Graph View', icon: 'network', desc: 'Relationship graph showing connections between contacts, companies, partners, projects, deals, and activities.' },
     ],
   },
   {
@@ -253,7 +254,7 @@ const BUILT_SURFACES = new Set([
   'crm.dashboard', 'crm.pipeline', 'crm.contacts', 'crm.companies', 'crm.activities',
   'prm.partners', 'prm.registrations', 'prm.commissions', 'prm.leads', 'prm.certifications', 'prm.analytics',
   'workflow.sequences',
-  'reports.pipeline', 'reports.sales', 'reports.partners', 'reports.activity', 'reports.productivity',
+  'reports.pipeline', 'reports.sales', 'reports.partners', 'reports.activity', 'reports.graph', 'reports.productivity',
   'team', 'settings',
 ]);
 
@@ -488,6 +489,40 @@ function readEntity(app, file) {
   return { file, frontmatter: fm, basename: file.basename };
 }
 
+function parseLinkValues(val) {
+  if (val == null || val === '') return [];
+  let rawItems = [];
+  if (Array.isArray(val)) {
+    rawItems = val.map(v => String(v).trim());
+  } else {
+    const str = String(val).trim();
+    if (str.includes('[[')) {
+      const regex = /\[\[(.*?)\]\]/g;
+      let match;
+      while ((match = regex.exec(str)) !== null) {
+        if (match[1].trim()) {
+          rawItems.push(match[1].trim());
+        }
+      }
+      if (rawItems.length === 0 && str) {
+        rawItems = str.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    } else {
+      rawItems = str.split(',').map(s => s.trim()).filter(Boolean);
+    }
+  }
+  return rawItems.map(item => {
+    let clean = item.replace(/^\[\[|\]\]$/g, '').trim();
+    let display = clean;
+    if (clean.includes('|')) {
+      const parts = clean.split('|');
+      clean = parts[0].trim();
+      display = parts[1].trim();
+    }
+    return { target: clean, display: display };
+  }).filter(item => item.target);
+}
+
 function listEntities(app, entityKey) {
   return listEntityFiles(app, entityKey).map((f) => readEntity(app, f));
 }
@@ -706,17 +741,48 @@ async function readProjectMeta(app, file) {
   return { content, sections, milestones, total, done, percent, next, today };
 }
 
-async function createEntity(app, entityKey, rawName) {
-  const def = ENTITIES[entityKey];
-  await ensureFolderSync(app, def.folder);
-  const safeName = (rawName || `Untitled ${def.label}`).replace(/[\\/:*?"<>|]/g, '-').trim() || 'Untitled';
-  let path = `${def.folder}/${safeName}.md`;
+async function createEntity(app, entityKeyOrFolder, rawName) {
+  let folder = entityKeyOrFolder;
+  let label = 'Note';
+  let isEntity = false;
+
+  if (ENTITIES[entityKeyOrFolder]) {
+    const def = ENTITIES[entityKeyOrFolder];
+    folder = def.folder;
+    label = def.label;
+    isEntity = true;
+  } else if (entityKeyOrFolder && entityKeyOrFolder.startsWith('folder:')) {
+    folder = entityKeyOrFolder.slice('folder:'.length);
+  }
+
+  // Double check if this folder matches an entity in case we got a raw folder path
+  if (!isEntity && folder) {
+    const normalizedPath = folder.replace(/\/+$/, '').toLowerCase();
+    for (const [ek, def] of Object.entries(ENTITIES)) {
+      if (def && def.folder && def.folder.replace(/\/+$/, '').toLowerCase() === normalizedPath) {
+        entityKeyOrFolder = ek;
+        folder = def.folder;
+        label = def.label;
+        isEntity = true;
+        break;
+      }
+    }
+  }
+
+  await ensureFolderSync(app, folder);
+  const safeName = (rawName || `Untitled ${label}`).replace(/[\\/:*?"<>|]/g, '-').trim() || 'Untitled';
+  let path = `${folder}/${safeName}.md`;
   let n = 2;
   while (app.vault.getAbstractFileByPath(path)) {
-    path = `${def.folder}/${safeName} ${n}.md`;
+    path = `${folder}/${safeName} ${n}.md`;
     n++;
   }
-  return await app.vault.create(path, entityTemplate(entityKey, safeName));
+
+  const template = isEntity
+    ? entityTemplate(entityKeyOrFolder, safeName)
+    : `---\nname: ${safeName}\n---\n\n# ${safeName}\n\n`;
+
+  return await app.vault.create(path, template);
 }
 
 /* ─────────── Daily-note read/write ─────────── */
@@ -1541,7 +1607,10 @@ class CadenceEntityCreateModal extends obsidian.Modal {
         input = row.createEl('input', { type: 'text', cls: 'cad-create-input' });
         input.placeholder = fieldType === 'tags' ? 'tag1, tag2' : this._placeholderFor(f, isPrimary);
 
-        if (f.key === 'owner' || f.key === 'assigned' || f.key === 'company' || f.key === 'contact' || f.key === 'contacts' || f.key === 'partner' || f.key === 'with' || f.key === 'related' || f.key === 'domain' || f.key === 'industry' || f.key === 'role' || f.key === 'tags' || fieldType === 'tags') {
+        const suggestionSource = getFieldSuggestionSource(f);
+        const hasSuggestions = suggestionSource !== 'none';
+
+        if (hasSuggestions) {
           row.style.position = 'relative'; // Ensure absolute positioning of suggestions works
           const suggestionsBox = row.createDiv({ cls: 'cad-pd-tag-suggestions' });
           suggestionsBox.style.position = 'absolute';
@@ -1570,8 +1639,19 @@ class CadenceEntityCreateModal extends obsidian.Modal {
               return;
             }
 
+            const isEntitySrc = ENTITIES[suggestionSource] != null;
+            const isFolderSrc = suggestionSource && suggestionSource.startsWith('folder:');
+            const customFolderPath = isFolderSrc ? suggestionSource.slice('folder:'.length) : null;
+            const typedNames = fullVal.split(',').map(s => s.trim().replace(/^\[\[|\]\]$/g, '').toLowerCase()).filter(Boolean);
+
             let filtered = [];
-            if (f.key === 'domain' || f.key === 'industry' || f.key === 'role') {
+            if (suggestionSource === 'tags') {
+              const suggestions = Object.keys(this.app.metadataCache.getTags() || {}).map(t => t.replace(/^#/, ''));
+              filtered = suggestions.filter((v) =>
+                v.toLowerCase().includes(query) &&
+                !typedNames.includes(v.toLowerCase())
+              );
+            } else if (suggestionSource === 'history') {
               const allFiles = this.app.vault.getMarkdownFiles();
               const allValues = new Set();
               allFiles.forEach(file => {
@@ -1579,32 +1659,39 @@ class CadenceEntityCreateModal extends obsidian.Modal {
                 const fm = cache && cache.frontmatter || {};
                 const val = fm[f.key];
                 if (Array.isArray(val)) {
-                  val.forEach(v => { if (v) allValues.add(String(v).trim()); });
+                  val.forEach(v => { if (v) allValues.add(String(v).replace(/^\[\[|\]\]$/g, '').trim()); });
                 } else if (val != null && val !== '') {
-                  allValues.add(String(val).trim());
+                  allValues.add(String(val).replace(/^\[\[|\]\]$/g, '').trim());
                 }
               });
-              const suggestions = Array.from(allValues);
-              const typedNames = fullVal.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-              filtered = suggestions.filter((v) =>
+              filtered = Array.from(allValues).filter((v) =>
                 v.toLowerCase().includes(query) &&
                 !typedNames.includes(v.toLowerCase())
               );
-            } else if (f.key === 'tags' || fieldType === 'tags') {
-              const suggestions = Object.keys(this.app.metadataCache.getTags() || {}).map(t => t.replace(/^#/, ''));
-              const typedNames = fullVal.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-              filtered = suggestions.filter((v) =>
-                v.toLowerCase().includes(query) &&
-                !typedNames.includes(v.toLowerCase())
-              );
-            } else {
-              const targetKey = f.key === 'company' ? 'company' : (f.key === 'partner' ? 'partner' : (f.key === 'related' ? 'project' : 'contact'));
-              const entitiesList = listEntities(this.app, targetKey);
-              const typedNames = fullVal.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-              filtered = entitiesList.filter((c) =>
-                c.basename.toLowerCase().includes(query) &&
-                !typedNames.includes(c.basename.toLowerCase())
-              ).map(c => c.basename);
+            } else if (suggestionSource !== 'none') {
+              if (customFolderPath) {
+                const folderNode = this.app.vault.getAbstractFileByPath(customFolderPath);
+                const names = [];
+                if (folderNode && folderNode.children) {
+                  const walk = (node) => {
+                    for (const child of node.children) {
+                      if (child.children) walk(child);
+                      else if (child.path && child.path.endsWith('.md')) names.push(child.basename);
+                    }
+                  };
+                  walk(folderNode);
+                }
+                filtered = names.filter(n =>
+                  n.toLowerCase().includes(query) && !typedNames.includes(n.toLowerCase())
+                );
+              } else {
+                const targetKey = isEntitySrc ? suggestionSource : (f.key === 'company' ? 'company' : (f.key === 'partner' ? 'partner' : (f.key === 'related' ? 'project' : 'contact')));
+                const entitiesList = listEntities(this.app, targetKey);
+                filtered = entitiesList.filter((c) =>
+                  c.basename.toLowerCase().includes(query) &&
+                  !typedNames.includes(c.basename.toLowerCase())
+                ).map(c => c.basename);
+              }
             }
 
             if (filtered.length === 0) {
@@ -1669,8 +1756,12 @@ class CadenceEntityCreateModal extends obsidian.Modal {
         let raw = el.value;
         if (idx === 0) primaryValue = (raw || '').trim();
         if (raw === '' || raw == null) return;
-        const isEntityRef = ['owner', 'assigned', 'company', 'contact', 'contacts', 'partner', 'with', 'related'].includes(key);
-        const isListField = type === 'tags' || ['domain', 'industry', 'role', 'tags'].includes(key) || isEntityRef;
+
+        const f = this.def.fields.find(fd => fd.key === key);
+        const suggestionSource = getFieldSuggestionSource(f);
+        const isWikilink = suggestionSource !== 'none' && suggestionSource !== 'tags';
+        const isEntityRef = ['owner', 'assigned', 'company', 'contact', 'contacts', 'partner', 'with', 'related'].includes(key) || isWikilink;
+        const isListField = type === 'tags' || type === 'multitext' || (f && f.isList) || ['domain', 'industry', 'role', 'tags'].includes(key) || isEntityRef;
 
         if (isListField) {
           const parts = raw.split(',').map((t) => t.trim()).filter(Boolean);
@@ -1679,6 +1770,8 @@ class CadenceEntityCreateModal extends obsidian.Modal {
           } else {
             raw = parts;
           }
+        } else if (isEntityRef) {
+          raw = `[[${raw.replace(/^\[\[|\]\]$/g, '').trim()}]]`;
         } else if (type === 'number' || type === 'currency') {
           const n = Number(raw);
           raw = isNaN(n) ? null : n;
@@ -2108,6 +2201,7 @@ class CadenceAppView extends obsidian.ItemView {
       'reports.sales': () => this.renderReportSales(content),
       'reports.partners': () => this.renderReportPartners(content),
       'reports.activity': () => this.renderReportActivity(content),
+      'reports.graph': () => this.renderReportGraph(content),
       'reports.productivity': () => this.renderProductivity(content),
       'team': () => this.renderTeam(content),
       'settings': () => this.openSettingsTab(content),
@@ -2250,7 +2344,14 @@ class CadenceAppView extends obsidian.ItemView {
       });
     });
 
-    const cols = (opts.columns || def.columns).map((k) => def.fields.find((f) => f.key === k)).filter(Boolean);
+    const baseCols = opts.columns || def.columns;
+    const cols = baseCols.map((k) => def.fields.find((f) => f.key === k)).filter(Boolean);
+    // Dynamically append any custom/extra fields not present in baseCols
+    def.fields.forEach((f) => {
+      if (!baseCols.includes(f.key) && !cols.some(c => c.key === f.key)) {
+        cols.push(f);
+      }
+    });
     const tableWrap = root.createDiv({ cls: 'cad-table-wrap' });
     const table = tableWrap.createEl('table', { cls: 'cad-table' });
 
@@ -2369,7 +2470,10 @@ class CadenceAppView extends obsidian.ItemView {
           const td = tr.createEl('td');
           const val = entityValue(e, f.key, def);
           const formatted = fmtValue(val, f.type);
-          if (i === 0) {
+          const primaryField = def.fields.find(fd => fd.primary) || def.fields[0];
+          const hasPrimaryCol = cols.some(c => c.key === primaryField.key);
+          const isPrimaryCol = hasPrimaryCol ? (f.key === primaryField.key) : (i === 0);
+          if (isPrimaryCol) {
             const a = td.createEl('a', { cls: 'cad-row-primary', text: formatted || e.basename });
             a.addEventListener('click', (ev) => {
               ev.preventDefault();
@@ -2532,11 +2636,21 @@ class CadenceAppView extends obsidian.ItemView {
         if (isChips) {
           const isEntitySrc = ENTITIES[suggestionSource] != null;
           const isFolderSrc = suggestionSource && suggestionSource.startsWith('folder:');
-          const isPlainChip = ['tags', 'history', 'none'].includes(suggestionSource);
+          const isPlainChip = ['tags', 'none'].includes(suggestionSource);
           const isList = fieldType === 'tags' || fieldType === 'multitext' || f.isList === true || f.key === 'tags' || ['owner', 'assigned', 'contacts', 'domain', 'industry', 'role', 'with', 'related'].includes(f.key);
 
-          const targetEntityKey = isEntitySrc ? suggestionSource : null;
+          let targetEntityKey = isEntitySrc ? suggestionSource : null;
           const customFolderPath = isFolderSrc ? suggestionSource.slice('folder:'.length) : null;
+
+          if (isFolderSrc && customFolderPath) {
+            const normalizedPath = customFolderPath.replace(/\/+$/, '').toLowerCase();
+            for (const [ek, def] of Object.entries(ENTITIES)) {
+              if (def && def.folder && def.folder.replace(/\/+$/, '').toLowerCase() === normalizedPath) {
+                targetEntityKey = ek;
+                break;
+              }
+            }
+          }
 
           row.style.position = 'relative';
           const wrap = row.createDiv({ cls: 'cad-pd-tag-input-wrap' });
@@ -2606,9 +2720,9 @@ class CadenceAppView extends obsidian.ItemView {
                 const fm = cache && cache.frontmatter || {};
                 const val = fm[f.key];
                 if (Array.isArray(val)) {
-                  val.forEach(v => { if (v) allValues.add(String(v).trim()); });
+                  val.forEach(v => { if (v) allValues.add(String(v).replace(/^\[\[|\]\]$/g, '').trim()); });
                 } else if (val != null && val !== '') {
-                  allValues.add(String(val).trim());
+                  allValues.add(String(val).replace(/^\[\[|\]\]$/g, '').trim());
                 }
               });
               filtered = Array.from(allValues).filter((v) =>
@@ -2753,11 +2867,12 @@ class CadenceAppView extends obsidian.ItemView {
               const targetFile = this.app.vault.getMarkdownFiles().find(cFile => cFile.basename.toLowerCase() === name.toLowerCase());
               if (!targetFile) {
                 try {
-                  await createEntity(this.app, targetEntityKey, name);
-                  const label = ENTITIES[targetEntityKey] ? ENTITIES[targetEntityKey].label : targetEntityKey;
+                  const creationSource = suggestionSource === 'history' ? 'folder:Cadence/Shared' : (targetEntityKey || suggestionSource);
+                  await createEntity(this.app, creationSource, name);
+                  const label = ENTITIES[targetEntityKey] ? ENTITIES[targetEntityKey].label : 'Note';
                   new obsidian.Notice(`Created new ${label}: ${name}`);
                 } catch (e) {
-                  console.warn(`Failed to auto-create ${targetEntityKey}`, e);
+                  console.warn(`Failed to auto-create ${targetEntityKey || suggestionSource}`, e);
                 }
               }
             }
@@ -2836,7 +2951,10 @@ class CadenceAppView extends obsidian.ItemView {
         const td = tr.createEl('td');
         const val = entityValue(e, f.key, def);
         const formatted = fmtValue(val, f.type);
-        if (i === 0) {
+        const primaryField = def.fields.find(fd => fd.primary) || def.fields[0];
+        const hasPrimaryCol = cols.some(c => c.key === primaryField.key);
+        const isPrimaryCol = hasPrimaryCol ? (f.key === primaryField.key) : (i === 0);
+        if (isPrimaryCol) {
           const a = td.createEl('a', { cls: 'cad-row-primary', text: formatted || e.basename });
           a.style.fontWeight = 'bold';
           a.style.textDecoration = 'underline';
@@ -2926,10 +3044,20 @@ class CadenceAppView extends obsidian.ItemView {
       if (isChips) {
         const isEntitySrc2 = ENTITIES[suggestionSource] != null;
         const isFolderSrc2 = suggestionSource && suggestionSource.startsWith('folder:');
-        const isPlainChip = ['tags', 'history', 'none'].includes(suggestionSource);
+        const isPlainChip = ['tags', 'none'].includes(suggestionSource);
         const isList = fieldType === 'tags' || fieldType === 'multitext' || f.isList === true || ['owner', 'contacts', 'domain', 'industry', 'role', 'with', 'related'].includes(key);
-        const targetEntityKey = isEntitySrc2 ? suggestionSource : null;
+        let targetEntityKey = isEntitySrc2 ? suggestionSource : null;
         const customFolderPath = isFolderSrc2 ? suggestionSource.slice('folder:'.length) : null;
+
+        if (isFolderSrc2 && customFolderPath) {
+          const normalizedPath = customFolderPath.replace(/\/+$/, '').toLowerCase();
+          for (const [ek, def] of Object.entries(ENTITIES)) {
+            if (def && def.folder && def.folder.replace(/\/+$/, '').toLowerCase() === normalizedPath) {
+              targetEntityKey = ek;
+              break;
+            }
+          }
+        }
 
         const wrap = cell.createDiv({ cls: 'cad-pd-tag-input-wrap' });
         wrap.style.display = 'flex';
@@ -2997,9 +3125,9 @@ class CadenceAppView extends obsidian.ItemView {
               const fm = cache && cache.frontmatter || {};
               const val = fm[key];
               if (Array.isArray(val)) {
-                val.forEach(v => { if (v) allValues.add(String(v).trim()); });
+                val.forEach(v => { if (v) allValues.add(String(v).replace(/^\[\[|\]\]$/g, '').trim()); });
               } else if (val != null && val !== '') {
-                allValues.add(String(val).trim());
+                allValues.add(String(val).replace(/^\[\[|\]\]$/g, '').trim());
               }
             });
             filtered = Array.from(allValues).filter((v) =>
@@ -3150,11 +3278,12 @@ class CadenceAppView extends obsidian.ItemView {
             const targetFile = this.app.vault.getMarkdownFiles().find(cFile => cFile.basename.toLowerCase() === name.toLowerCase());
             if (!targetFile) {
               try {
-                await createEntity(this.app, targetEntityKey, name);
-                const label = ENTITIES[targetEntityKey] ? ENTITIES[targetEntityKey].label : targetEntityKey;
+                const creationSource = suggestionSource === 'history' ? 'folder:Cadence/Shared' : (targetEntityKey || suggestionSource);
+                await createEntity(this.app, creationSource, name);
+                const label = ENTITIES[targetEntityKey] ? ENTITIES[targetEntityKey].label : 'Note';
                 new obsidian.Notice(`Created new ${label}: ${name}`);
               } catch (e) {
-                console.warn(`Failed to auto-create ${targetEntityKey}`, e);
+                console.warn(`Failed to auto-create ${targetEntityKey || suggestionSource}`, e);
               }
             }
           }
@@ -3413,10 +3542,20 @@ class CadenceAppView extends obsidian.ItemView {
       if (isChips) {
         const isEntitySrc = ENTITIES[suggestionSource] != null;
         const isFolderSrc = suggestionSource && suggestionSource.startsWith('folder:');
-        const isPlainChip = ['tags', 'history', 'none'].includes(suggestionSource);
+        const isPlainChip = ['tags', 'none'].includes(suggestionSource);
         const isList = fieldType === 'tags' || fieldType === 'multitext' || f.isList === true || ['owner', 'contacts', 'domain', 'industry', 'role', 'with', 'related'].includes(key);
-        const targetEntityKey = isEntitySrc ? suggestionSource : null;
+        let targetEntityKey = isEntitySrc ? suggestionSource : null;
         const customFolderPath = isFolderSrc ? suggestionSource.slice('folder:'.length) : null;
+
+        if (isFolderSrc && customFolderPath) {
+          const normalizedPath = customFolderPath.replace(/\/+$/, '').toLowerCase();
+          for (const [ek, def] of Object.entries(ENTITIES)) {
+            if (def && def.folder && def.folder.replace(/\/+$/, '').toLowerCase() === normalizedPath) {
+              targetEntityKey = ek;
+              break;
+            }
+          }
+        }
 
         const wrap = cell.createDiv({ cls: 'cad-pd-tag-input-wrap' });
         wrap.style.display = 'flex';
@@ -3484,9 +3623,9 @@ class CadenceAppView extends obsidian.ItemView {
               const fm = cache && cache.frontmatter || {};
               const val = fm[key];
               if (Array.isArray(val)) {
-                val.forEach(v => { if (v) allValues.add(String(v).trim()); });
+                val.forEach(v => { if (v) allValues.add(String(v).replace(/^\[\[|\]\]$/g, '').trim()); });
               } else if (val != null && val !== '') {
-                allValues.add(String(val).trim());
+                allValues.add(String(val).replace(/^\[\[|\]\]$/g, '').trim());
               }
             });
             filtered = Array.from(allValues).filter((v) =>
@@ -3630,11 +3769,12 @@ class CadenceAppView extends obsidian.ItemView {
             const targetFile = this.app.vault.getMarkdownFiles().find(cFile => cFile.basename.toLowerCase() === name.toLowerCase());
             if (!targetFile) {
               try {
-                await createEntity(this.app, targetEntityKey, name);
-                const label = ENTITIES[targetEntityKey] ? ENTITIES[targetEntityKey].label : targetEntityKey;
+                const creationSource = suggestionSource === 'history' ? 'folder:Cadence/Shared' : (targetEntityKey || suggestionSource);
+                await createEntity(this.app, creationSource, name);
+                const label = ENTITIES[targetEntityKey] ? ENTITIES[targetEntityKey].label : 'Note';
                 new obsidian.Notice(`Created new ${label}: ${name}`);
               } catch (e) {
-                console.warn(`Failed to auto-create ${targetEntityKey}`, e);
+                console.warn(`Failed to auto-create ${targetEntityKey || suggestionSource}`, e);
               }
             }
           }
@@ -3976,26 +4116,26 @@ class CadenceAppView extends obsidian.ItemView {
 
   _renderEntityLinks(parent, val, targetEntityKey, prefix = '') {
     if (!val) return;
+    const items = parseLinkValues(val);
+    if (items.length === 0) return;
     if (prefix) parent.createSpan({ text: prefix });
-    const arr = Array.isArray(val) ? val : [val];
-    arr.forEach((v, idx) => {
+    items.forEach((item, idx) => {
       if (idx > 0) parent.createSpan({ text: ', ' });
-      const raw = String(v);
-      const clean = raw.replace(/^\[\[|\]\]$/g, '');
-      const link = parent.createEl('a', { text: clean, cls: `cad-${targetEntityKey}-link` });
+      const link = parent.createEl('a', { text: item.display, cls: `cad-${targetEntityKey}-link` });
       link.style.textDecoration = 'underline';
       link.style.cursor = 'pointer';
       link.addEventListener('click', (ev) => {
         ev.stopPropagation();
-        const targetFile = this.app.vault.getMarkdownFiles().find(f => f.basename.toLowerCase() === clean.toLowerCase());
+        const targetFile = this.app.vault.getMarkdownFiles().find(f => f.basename.toLowerCase() === item.target.toLowerCase());
         if (targetFile) {
           this.openEntityDetail(targetEntityKey, targetFile);
         } else {
-          this.app.workspace.openLinkText(clean, '', false);
+          this.app.workspace.openLinkText(item.target, '', false);
         }
       });
     });
   }
+
 
   _renderOwnerLinks(parent, ownerVal, showPrefix = true) {
     this._renderEntityLinks(parent, ownerVal, 'contact', showPrefix ? 'Owner: ' : '');
@@ -4183,360 +4323,7 @@ class CadenceAppView extends obsidian.ItemView {
     await this._homePipelineCard(right);
     await this._homeActivitiesCard(right);
 
-    // ─── RELATIONSHIP GRAPH (Full width at the bottom) ───
-    root.createDiv({ cls: 'cad-section-label-lg', text: 'CADENCE RELATIONSHIP GRAPH' });
-    const graphCard = root.createDiv({ cls: 'cad-home-card' });
-    graphCard.style.padding = '16px';
-    graphCard.style.height = '450px';
-    graphCard.style.position = 'relative';
-    graphCard.style.overflow = 'hidden';
-    graphCard.style.backgroundColor = 'var(--background-secondary)';
-    graphCard.style.borderRadius = '8px';
-    graphCard.style.border = '1px solid var(--border-color)';
-    graphCard.style.marginTop = '24px';
-    graphCard.style.marginBottom = '24px';
 
-    const canvas = graphCard.createEl('canvas');
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    canvas.style.display = 'block';
-    canvas.style.cursor = 'default';
-
-    // Tooltip
-    const tooltip = graphCard.createDiv();
-    tooltip.style.position = 'absolute';
-    tooltip.style.pointerEvents = 'none';
-    tooltip.style.padding = '6px 10px';
-    tooltip.style.backgroundColor = 'var(--background-primary)';
-    tooltip.style.border = '1px solid var(--border-color)';
-    tooltip.style.borderRadius = '4px';
-    tooltip.style.fontSize = '12px';
-    tooltip.style.color = 'var(--text-normal)';
-    tooltip.style.display = 'none';
-    tooltip.style.zIndex = '100';
-    tooltip.style.boxShadow = 'var(--shadow-s)';
-
-    // Gather Nodes & Links
-    const rawFiles = this.app.vault.getMarkdownFiles().filter(f => f.path.startsWith('Cadence/'));
-    const resolvedLinks = this.app.metadataCache.resolvedLinks || {};
-
-    const nodes = [];
-    const nodeMap = new Map();
-
-    rawFiles.forEach((file) => {
-      let type = 'note';
-      if (file.path.startsWith('Cadence/Contacts/')) type = 'contact';
-      else if (file.path.startsWith('Cadence/Companies/')) type = 'company';
-      else if (file.path.startsWith('Cadence/Partners/')) type = 'partner';
-      else if (file.path.startsWith('Cadence/Pipeline/')) type = 'deal';
-      else if (file.path.startsWith('Cadence/Projects/')) type = 'project';
-      else if (file.path.startsWith('Cadence/Activities/')) type = 'activity';
-      else if (file.path.startsWith('Cadence/Leads/')) type = 'lead';
-
-      const node = {
-        id: file.path,
-        name: file.basename,
-        type,
-        file,
-        x: Math.random() * 500 + 150,
-        y: Math.random() * 250 + 100,
-        vx: 0,
-        vy: 0,
-        radius: type === 'company' ? 7 : (type === 'project' ? 6.5 : 5)
-      };
-      nodes.push(node);
-      nodeMap.set(file.path, node);
-    });
-
-    const links = [];
-    nodes.forEach((sourceNode) => {
-      const targets = resolvedLinks[sourceNode.id] || {};
-      for (const targetPath of Object.keys(targets)) {
-        const targetNode = nodeMap.get(targetPath);
-        if (targetNode) {
-          links.push({ source: sourceNode, target: targetNode });
-        }
-      }
-    });
-
-    // Colors mapping to native Obsidian style & pastel highlights
-    const typeColors = {
-      contact: 'var(--graph-node-resolved, #f59e0b)',  // warm orange
-      company: '#0ea5e9',  // sky blue
-      partner: '#ec4899',  // rose pink
-      deal: '#10b981',     // emerald green
-      project: '#8b5cf6',  // violet purple
-      activity: '#64748b', // slate gray
-      lead: '#a855f7',     // purple
-      note: 'var(--graph-node, #94a3b8)'      // gray
-    };
-
-    let width = canvas.clientWidth || 800;
-    let height = canvas.clientHeight || 400;
-    canvas.width = width * window.devicePixelRatio;
-    canvas.height = height * window.devicePixelRatio;
-    const ctx = canvas.getContext('2d');
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-
-    // Zoom & Pan state
-    let transform = { x: 0, y: 0, k: 1 };
-    let isPanning = false;
-    let panStart = { x: 0, y: 0 };
-    let draggedNode = null;
-    let hoveredNode = null;
-    let dragStartPos = { x: 0, y: 0 };
-    let hasMovedSinceDown = false;
-
-    // Resize handling
-    const resizeObserver = new ResizeObserver(() => {
-      if (!canvas.clientWidth) return;
-      width = canvas.clientWidth;
-      height = canvas.clientHeight;
-      canvas.width = width * window.devicePixelRatio;
-      canvas.height = height * window.devicePixelRatio;
-      ctx.resetTransform();
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-    });
-    resizeObserver.observe(canvas);
-
-    // Coordinate conversions
-    const getMousePos = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
-      };
-    };
-
-    const getCanvasPos = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const screenX = e.clientX - rect.left;
-      const screenY = e.clientY - rect.top;
-      return {
-        x: (screenX - transform.x) / transform.k,
-        y: (screenY - transform.y) / transform.k
-      };
-    };
-
-    // Interaction Events
-    canvas.addEventListener('mousedown', (e) => {
-      dragStartPos = { x: e.clientX, y: e.clientY };
-      hasMovedSinceDown = false;
-
-      const canvasPos = getCanvasPos(e);
-      let found = null;
-      for (let i = nodes.length - 1; i >= 0; i--) {
-        const n = nodes[i];
-        const dx = canvasPos.x - n.x;
-        const dy = canvasPos.y - n.y;
-        if (dx * dx + dy * dy < (n.radius + 8) * (n.radius + 8)) {
-          found = n;
-          break;
-        }
-      }
-
-      if (found) {
-        draggedNode = found;
-      } else {
-        isPanning = true;
-        panStart = { x: e.clientX - transform.x, y: e.clientY - transform.y };
-        canvas.style.cursor = 'grabbing';
-      }
-    });
-
-    canvas.addEventListener('mousemove', (e) => {
-      const dist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
-      if (dist > 4) {
-        hasMovedSinceDown = true;
-      }
-
-      const canvasPos = getCanvasPos(e);
-
-      if (draggedNode) {
-        draggedNode.x = canvasPos.x;
-        draggedNode.y = canvasPos.y;
-        draggedNode.vx = 0;
-        draggedNode.vy = 0;
-      } else if (isPanning) {
-        transform.x = e.clientX - panStart.x;
-        transform.y = e.clientY - panStart.y;
-      }
-
-      // Hover check using canvasPos
-      let found = null;
-      for (let i = nodes.length - 1; i >= 0; i--) {
-        const n = nodes[i];
-        const dx = canvasPos.x - n.x;
-        const dy = canvasPos.y - n.y;
-        if (dx * dx + dy * dy < (n.radius + 8) * (n.radius + 8)) {
-          found = n;
-          break;
-        }
-      }
-
-      hoveredNode = found;
-      if (hoveredNode) {
-        canvas.style.cursor = 'pointer';
-        tooltip.style.display = 'block';
-        const rect = canvas.getBoundingClientRect();
-        const screenX = e.clientX - rect.left;
-        const screenY = e.clientY - rect.top;
-        tooltip.style.left = `${screenX + 12}px`;
-        tooltip.style.top = `${screenY + 12}px`;
-        tooltip.setText(`${hoveredNode.type.toUpperCase()}: ${hoveredNode.name}`);
-      } else {
-        canvas.style.cursor = isPanning ? 'grabbing' : 'default';
-        tooltip.style.display = 'none';
-      }
-    });
-
-    canvas.addEventListener('mouseup', (e) => {
-      isPanning = false;
-      canvas.style.cursor = hoveredNode ? 'pointer' : 'default';
-
-      if (!hasMovedSinceDown && hoveredNode) {
-        this.openEntityDetail(hoveredNode.type, hoveredNode.file);
-      }
-
-      draggedNode = null;
-    });
-
-    canvas.addEventListener('mouseleave', () => {
-      draggedNode = null;
-      isPanning = false;
-      hoveredNode = null;
-      tooltip.style.display = 'none';
-      canvas.style.cursor = 'default';
-    });
-
-    // Elegant scroll wheel zoom centered at mouse position
-    canvas.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const mouse = getMousePos(e);
-
-      const zoomIntensity = 0.05;
-      const factor = Math.exp(-e.deltaY * zoomIntensity * 0.015);
-      const newK = Math.max(0.15, Math.min(4, transform.k * factor));
-
-      transform.x = mouse.x - (mouse.x - transform.x) * (newK / transform.k);
-      transform.y = mouse.y - (mouse.y - transform.y) * (newK / transform.k);
-      transform.k = newK;
-    });
-
-    // Physics Engine
-    const step = () => {
-      if (!canvas.isConnected) {
-        resizeObserver.disconnect();
-        return;
-      }
-
-      // 1. Repulsion force between nodes
-      for (let i = 0; i < nodes.length; i++) {
-        const n1 = nodes[i];
-        for (let j = i + 1; j < nodes.length; j++) {
-          const n2 = nodes[j];
-          const dx = n2.x - n1.x;
-          const dy = n2.y - n1.y;
-          const distSq = dx * dx + dy * dy || 1;
-          const dist = Math.sqrt(distSq);
-          if (dist < 160) {
-            const force = (160 - dist) * 0.04;
-            const fx = (dx / dist) * force;
-            const fy = (dy / dist) * force;
-            if (n1 !== draggedNode) { n1.vx -= fx; n1.vy -= fy; }
-            if (n2 !== draggedNode) { n2.vx += fx; n2.vy += fy; }
-          }
-        }
-      }
-
-      // 2. Attraction force along links
-      links.forEach((l) => {
-        const dx = l.target.x - l.source.x;
-        const dy = l.target.y - l.source.y;
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const desiredDist = 65;
-        const force = (dist - desiredDist) * 0.009;
-        const fx = (dx / dist) * force;
-        const fy = (dy / dist) * force;
-        if (l.source !== draggedNode) { l.source.vx += fx; l.source.vy += fy; }
-        if (l.target !== draggedNode) { l.target.vx -= fx; l.target.vy -= fy; }
-      });
-
-      // 3. Gravity pulling to center & Update position
-      const cx = width / 2;
-      const cy = height / 2;
-      nodes.forEach((n) => {
-        if (n === draggedNode) return;
-
-        const dx = cx - n.x;
-        const dy = cy - n.y;
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-
-        let gravity = 0.0003;
-        if (dist > 250) {
-          gravity = 0.0012; // soft pull back bounds
-        }
-
-        n.vx += dx * gravity;
-        n.vy += dy * gravity;
-
-        // Apply velocities and damp (glide damping = 0.92 for buttery smooth!)
-        n.x += n.vx;
-        n.y += n.vy;
-        n.vx *= 0.92;
-        n.vy *= 0.92;
-      });
-
-      // 4. Render
-      ctx.clearRect(0, 0, width, height);
-
-      ctx.save();
-      ctx.translate(transform.x, transform.y);
-      ctx.scale(transform.k, transform.k);
-
-      // Draw links
-      ctx.lineWidth = 0.8 / transform.k;
-      ctx.strokeStyle = 'var(--graph-line, var(--border-color, rgba(255, 255, 255, 0.08)))';
-      links.forEach((l) => {
-        ctx.beginPath();
-        ctx.moveTo(l.source.x, l.source.y);
-        ctx.lineTo(l.target.x, l.target.y);
-        ctx.stroke();
-      });
-
-      // Draw nodes
-      nodes.forEach((n) => {
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
-        ctx.fillStyle = typeColors[n.type] || typeColors.note;
-        ctx.fill();
-
-        // Highlight ring if hovered
-        if (n === hoveredNode) {
-          ctx.strokeStyle = 'var(--text-normal, #ffffff)';
-          ctx.lineWidth = 2 / transform.k;
-          ctx.stroke();
-        } else {
-          ctx.strokeStyle = 'var(--background-secondary)';
-          ctx.lineWidth = 1.2 / transform.k;
-          ctx.stroke();
-        }
-      });
-
-      // Draw elegant labels under nodes
-      nodes.forEach((n) => {
-        ctx.fillStyle = n === hoveredNode ? 'var(--text-normal)' : 'var(--text-muted)';
-        ctx.font = n === hoveredNode ? `bold ${9.5 / transform.k}px var(--font-interface, sans-serif)` : `${8.5 / transform.k}px var(--font-interface, sans-serif)`;
-        ctx.textAlign = 'center';
-        ctx.fillText(n.name, n.x, n.y + n.radius + 12 / transform.k);
-      });
-
-      ctx.restore();
-
-      requestAnimationFrame(step);
-    };
-
-    requestAnimationFrame(step);
   }
 
   _homeCard(parent, title, action, tone) {
@@ -5331,36 +5118,44 @@ class CadenceAppView extends obsidian.ItemView {
           const meta = card.createDiv({ cls: 'cad-kanban-card-meta' });
           const v = entityValue(e, 'value', def);
           if (v) meta.createSpan({ cls: 'cad-kanban-card-value', text: fmtValue(v, 'currency') });
-          const co = entityValue(e, 'company', def);
-          const contact = entityValue(e, 'contact', def);
 
-          if (co) {
+          const coValues = parseLinkValues(entityValue(e, 'company', def));
+          if (coValues.length > 0) {
             meta.createSpan({ text: ' · ' });
-            const cleanCo = String(co).replace(/^\[\[|\]\]$/g, '').trim();
-            const coLink = meta.createEl('a', { cls: 'cad-company-link', text: cleanCo });
-            coLink.style.textDecoration = 'underline';
-            coLink.style.cursor = 'pointer';
-            coLink.addEventListener('click', (ev) => {
-              ev.preventDefault();
-              ev.stopPropagation();
-              const targetFile = this.app.vault.getMarkdownFiles().find(f => f.basename.toLowerCase() === cleanCo.toLowerCase());
-              if (targetFile) this.openEntityDetail('company', targetFile);
-              else this.app.workspace.openLinkText(cleanCo, '', false);
+            coValues.forEach((item, idx) => {
+              if (idx > 0) {
+                meta.createSpan({ text: ', ' });
+              }
+              const coLink = meta.createEl('a', { cls: 'cad-company-link', text: item.display });
+              coLink.style.textDecoration = 'underline';
+              coLink.style.cursor = 'pointer';
+              coLink.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                const targetFile = this.app.vault.getMarkdownFiles().find(f => f.basename.toLowerCase() === item.target.toLowerCase());
+                if (targetFile) this.openEntityDetail('company', targetFile);
+                else this.app.workspace.openLinkText(item.target, '', false);
+              });
             });
           }
 
-          if (contact) {
+          const contactValues = parseLinkValues(entityValue(e, 'contact', def));
+          if (contactValues.length > 0) {
             meta.createSpan({ text: ' · ' });
-            const cleanCt = String(contact).replace(/^\[\[|\]\]$/g, '').trim();
-            const ctLink = meta.createEl('a', { cls: 'cad-contact-link', text: cleanCt });
-            ctLink.style.textDecoration = 'underline';
-            ctLink.style.cursor = 'pointer';
-            ctLink.addEventListener('click', (ev) => {
-              ev.preventDefault();
-              ev.stopPropagation();
-              const targetFile = this.app.vault.getMarkdownFiles().find(f => f.basename.toLowerCase() === cleanCt.toLowerCase());
-              if (targetFile) this.openEntityDetail('contact', targetFile);
-              else this.app.workspace.openLinkText(cleanCt, '', false);
+            contactValues.forEach((item, idx) => {
+              if (idx > 0) {
+                meta.createSpan({ text: ', ' });
+              }
+              const ctLink = meta.createEl('a', { cls: 'cad-contact-link', text: item.display });
+              ctLink.style.textDecoration = 'underline';
+              ctLink.style.cursor = 'pointer';
+              ctLink.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                const targetFile = this.app.vault.getMarkdownFiles().find(f => f.basename.toLowerCase() === item.target.toLowerCase());
+                if (targetFile) this.openEntityDetail('contact', targetFile);
+                else this.app.workspace.openLinkText(item.target, '', false);
+              });
             });
           }
 
@@ -5491,11 +5286,21 @@ class CadenceAppView extends obsidian.ItemView {
         return db - da;
       })
       .slice(0, 6)
-      .map((e) => ({
-        title: entityValue(e, 'subject', ENTITIES.activity) || e.basename,
-        meta: `${entityValue(e, 'type', ENTITIES.activity) || '—'} · ${entityValue(e, 'with', ENTITIES.activity) || '—'} · ${fmtValue(entityValue(e, 'when', ENTITIES.activity), 'date')}`,
-        file: e.file,
-      }));
+      .map((e) => {
+        const typeVal = entityValue(e, 'type', ENTITIES.activity) || '—';
+        const withVal = entityValue(e, 'with', ENTITIES.activity) || '—';
+        const dateVal = fmtValue(entityValue(e, 'when', ENTITIES.activity), 'date');
+        return {
+          title: entityValue(e, 'subject', ENTITIES.activity) || e.basename,
+          metaParts: [
+            { text: typeVal },
+            { text: ' · ' },
+            { text: withVal, entityKey: 'contact' },
+            { text: ` · ${dateVal}` }
+          ],
+          file: e.file,
+        };
+      });
     this._dashCardSection(right, `RECENT ACTIVITY · ${activities.length} total`, recentAct, 'No activity logged yet. Capture a call or meeting under CRM > Activities.');
 
     // Customer base — mini stat row inside a card
@@ -5528,11 +5333,34 @@ class CadenceAppView extends obsidian.ItemView {
     }
     rows.forEach((r) => {
       const row = body.createDiv({ cls: 'cad-dash-row' });
-      row.createDiv({ cls: 'cad-dash-row-title', text: r.title });
-      row.createDiv({ cls: 'cad-dash-row-meta', text: r.meta });
-      if (r.file) row.addEventListener('click', () => this.openEntityDetailFromFile(r.file));
+      
+      const titleDiv = row.createDiv({ cls: 'cad-dash-row-title' });
+      if (r.titleEntityKey) {
+        this._renderEntityLinks(titleDiv, r.title, r.titleEntityKey);
+      } else {
+        titleDiv.setText(r.title || '');
+      }
+
+      const metaDiv = row.createDiv({ cls: 'cad-dash-row-meta' });
+      if (r.metaParts) {
+        r.metaParts.forEach((part) => {
+          if (part.entityKey) {
+            this._renderEntityLinks(metaDiv, part.text, part.entityKey);
+          } else {
+            metaDiv.createSpan({ text: part.text || '' });
+          }
+        });
+      } else {
+        metaDiv.setText(r.meta || '');
+      }
+
+      if (r.file) {
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', () => this.openEntityDetailFromFile(r.file));
+      }
     });
   }
+
 
   /* ── Reports: Productivity (over daily notes) ── */
   async renderProductivity(root) {
@@ -5727,6 +5555,7 @@ class CadenceAppView extends obsidian.ItemView {
       .slice(0, 8)
       .map(([owner, data]) => ({
         title: owner,
+        titleEntityKey: owner === '(unassigned)' ? null : 'contact',
         meta: `${data.count} deal${data.count === 1 ? '' : 's'} · ${fmtValue(data.value, 'currency')}`,
       }));
     this._dashCardSection(left, `OPEN PIPELINE BY OWNER · top ${Math.min(8, byOwner.size)}`, ownerRows, 'No open deals to attribute.');
@@ -5841,11 +5670,18 @@ class CadenceAppView extends obsidian.ItemView {
     const topWins = [...won]
       .sort((a, b) => dealValue(b) - dealValue(a))
       .slice(0, 6)
-      .map((e) => ({
-        title: entityValue(e, 'title', def) || e.basename,
-        meta: `${entityValue(e, 'company', def) || '—'} · ${fmtValue(dealValue(e), 'currency')}`,
-        file: e.file,
-      }));
+      .map((e) => {
+        const companyVal = entityValue(e, 'company', def) || '—';
+        const valStr = fmtValue(dealValue(e), 'currency');
+        return {
+          title: entityValue(e, 'title', def) || e.basename,
+          metaParts: [
+            { text: companyVal, entityKey: 'company' },
+            { text: ` · ${valStr}` }
+          ],
+          file: e.file,
+        };
+      });
     this._dashCardSection(left, 'TOP WINS · top 6', topWins, 'No wins logged yet — close one and tag it Won.');
 
     // Top owners by revenue
@@ -5861,6 +5697,7 @@ class CadenceAppView extends obsidian.ItemView {
       .slice(0, 6)
       .map(([owner, data]) => ({
         title: owner,
+        titleEntityKey: owner === '(unassigned)' ? null : 'contact',
         meta: `${data.count} won · ${fmtValue(data.revenue, 'currency')}`,
       }));
     this._dashCardSection(right, 'OWNER LEADERBOARD · top 6 by revenue', ownerRows, 'No revenue attributed to owners yet.');
@@ -5941,7 +5778,12 @@ class CadenceAppView extends obsidian.ItemView {
         .forEach(([p, items]) => {
           const v = items.reduce((s, e) => s + dealValue(e), 0);
           const row = dbpBody.createDiv({ cls: 'cad-dash-row' });
-          row.createDiv({ cls: 'cad-dash-row-title', text: p });
+          const titleDiv = row.createDiv({ cls: 'cad-dash-row-title' });
+          if (p && p !== '(direct)') {
+            this._renderEntityLinks(titleDiv, p, 'partner');
+          } else {
+            titleDiv.setText(p || '');
+          }
           row.createDiv({ cls: 'cad-dash-row-meta', text: `${items.length} deal${items.length === 1 ? '' : 's'} · ${fmtValue(v, 'currency')}` });
         });
     }
@@ -5960,11 +5802,18 @@ class CadenceAppView extends obsidian.ItemView {
       .filter((x) => x && x.date.getTime() >= now && x.date.getTime() <= horizon)
       .sort((a, b) => a.date - b.date)
       .slice(0, 8)
-      .map((x) => ({
-        title: entityValue(x.entity, 'name', certDef) || x.entity.basename,
-        meta: `${entityValue(x.entity, 'partner', certDef) || '—'} · expires ${fmtValue(x.date, 'date')}`,
-        file: x.entity.file,
-      }));
+      .map((x) => {
+        const partnerVal = entityValue(x.entity, 'partner', certDef) || '—';
+        const expVal = ` · expires ${fmtValue(x.date, 'date')}`;
+        return {
+          title: entityValue(x.entity, 'name', certDef) || x.entity.basename,
+          metaParts: [
+            { text: partnerVal, entityKey: 'partner' },
+            { text: expVal }
+          ],
+          file: x.entity.file,
+        };
+      });
     this._dashCardSection(right, 'CERTS EXPIRING · NEXT 90 DAYS', upcomingCerts, 'No certifications expiring in the next 90 days.');
   }
 
@@ -6042,6 +5891,7 @@ class CadenceAppView extends obsidian.ItemView {
       .slice(0, 8)
       .map(([who, count]) => ({
         title: who,
+        titleEntityKey: 'contact',
         meta: `${count} activit${count === 1 ? 'y' : 'ies'}`,
       }));
     this._dashCardSection(left, 'TOP CONTACTS · by activity count', topContactRows, 'No activities tagged with a contact yet.');
@@ -6054,12 +5904,381 @@ class CadenceAppView extends obsidian.ItemView {
         return db - da;
       })
       .slice(0, 10)
-      .map((e) => ({
-        title: entityValue(e, 'subject', def) || e.basename,
-        meta: `${entityValue(e, 'type', def) || '—'} · ${entityValue(e, 'with', def) || '—'} · ${fmtValue(entityValue(e, 'when', def), 'date')}`,
-        file: e.file,
-      }));
+      .map((e) => {
+        const typeVal = entityValue(e, 'type', def) || '—';
+        const withVal = entityValue(e, 'with', def) || '—';
+        const dateVal = fmtValue(entityValue(e, 'when', def), 'date');
+        return {
+          title: entityValue(e, 'subject', def) || e.basename,
+          metaParts: [
+            { text: typeVal },
+            { text: ' · ' },
+            { text: withVal, entityKey: 'contact' },
+            { text: ` · ${dateVal}` }
+          ],
+          file: e.file,
+        };
+      });
     this._dashCardSection(right, 'RECENT ACTIVITY · last 10', recent, 'No activities yet — log one under CRM > Activities.');
+  }
+
+  /* ── Reports: Relationship Graph ────────── */
+  async renderReportGraph(root) {
+    root.addClass('cadence-report');
+    this._renderPageHeader(root, 'Graph View', 'Relationship graph showing connections between contacts, companies, partners, projects, deals, and activities.');
+
+    const graphCard = root.createDiv({ cls: 'cad-home-card' });
+    graphCard.style.padding = '16px';
+    graphCard.style.height = '600px';
+    graphCard.style.position = 'relative';
+    graphCard.style.overflow = 'hidden';
+    graphCard.style.backgroundColor = 'var(--background-secondary)';
+    graphCard.style.borderRadius = '8px';
+    graphCard.style.border = '1px solid var(--border-color)';
+    graphCard.style.marginTop = '24px';
+    graphCard.style.marginBottom = '24px';
+
+    const canvas = graphCard.createEl('canvas');
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.display = 'block';
+    canvas.style.cursor = 'default';
+
+    // Tooltip
+    const tooltip = graphCard.createDiv();
+    tooltip.style.position = 'absolute';
+    tooltip.style.pointerEvents = 'none';
+    tooltip.style.padding = '6px 10px';
+    tooltip.style.backgroundColor = 'var(--background-primary)';
+    tooltip.style.border = '1px solid var(--border-color)';
+    tooltip.style.borderRadius = '4px';
+    tooltip.style.fontSize = '12px';
+    tooltip.style.color = 'var(--text-normal)';
+    tooltip.style.display = 'none';
+    tooltip.style.zIndex = '100';
+    tooltip.style.boxShadow = 'var(--shadow-s)';
+
+    // Gather Nodes & Links
+    const rawFiles = this.app.vault.getMarkdownFiles().filter(f => f.path.startsWith('Cadence/'));
+    const resolvedLinks = this.app.metadataCache.resolvedLinks || {};
+
+    const nodes = [];
+    const nodeMap = new Map();
+
+    rawFiles.forEach((file) => {
+      let type = 'note';
+      if (file.path.startsWith('Cadence/Contacts/')) type = 'contact';
+      else if (file.path.startsWith('Cadence/Companies/')) type = 'company';
+      else if (file.path.startsWith('Cadence/Partners/')) type = 'partner';
+      else if (file.path.startsWith('Cadence/Pipeline/')) type = 'deal';
+      else if (file.path.startsWith('Cadence/Projects/')) type = 'project';
+      else if (file.path.startsWith('Cadence/Activities/')) type = 'activity';
+      else if (file.path.startsWith('Cadence/Leads/')) type = 'lead';
+
+      const node = {
+        id: file.path,
+        name: file.basename,
+        type,
+        file,
+        x: Math.random() * 500 + 150,
+        y: Math.random() * 250 + 100,
+        vx: 0,
+        vy: 0,
+        radius: type === 'company' ? 7 : (type === 'project' ? 6.5 : 5)
+      };
+      nodes.push(node);
+      nodeMap.set(file.path, node);
+    });
+
+    const links = [];
+    nodes.forEach((sourceNode) => {
+      const targets = resolvedLinks[sourceNode.id] || {};
+      for (const targetPath of Object.keys(targets)) {
+        const targetNode = nodeMap.get(targetPath);
+        if (targetNode) {
+          links.push({ source: sourceNode, target: targetNode });
+        }
+      }
+    });
+
+    // Colors mapping to native Obsidian style & pastel highlights
+    const typeColors = {
+      contact: 'var(--graph-node-resolved, #f59e0b)',  // warm orange
+      company: '#0ea5e9',  // sky blue
+      partner: '#ec4899',  // rose pink
+      deal: '#10b981',     // emerald green
+      project: '#8b5cf6',  // violet purple
+      activity: '#64748b', // slate gray
+      lead: '#a855f7',     // purple
+      note: 'var(--graph-node, #94a3b8)'      // gray
+    };
+
+    let width = canvas.clientWidth || 800;
+    let height = canvas.clientHeight || 400;
+    canvas.width = width * window.devicePixelRatio;
+    canvas.height = height * window.devicePixelRatio;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+    // Zoom & Pan state
+    let transform = { x: 0, y: 0, k: 1 };
+    let isPanning = false;
+    let panStart = { x: 0, y: 0 };
+    let draggedNode = null;
+    let hoveredNode = null;
+    let dragStartPos = { x: 0, y: 0 };
+    let hasMovedSinceDown = false;
+
+    // Resize handling
+    const resizeObserver = new ResizeObserver(() => {
+      if (!canvas.clientWidth) return;
+      width = canvas.clientWidth;
+      height = canvas.clientHeight;
+      canvas.width = width * window.devicePixelRatio;
+      canvas.height = height * window.devicePixelRatio;
+      ctx.resetTransform();
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    });
+    resizeObserver.observe(canvas);
+
+    // Coordinate conversions
+    const getMousePos = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    };
+
+    const getCanvasPos = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const screenX = e.clientX - rect.left;
+      const screenY = e.clientY - rect.top;
+      return {
+        x: (screenX - transform.x) / transform.k,
+        y: (screenY - transform.y) / transform.k
+      };
+    };
+
+    // Interaction Events
+    canvas.addEventListener('mousedown', (e) => {
+      dragStartPos = { x: e.clientX, y: e.clientY };
+      hasMovedSinceDown = false;
+
+      const canvasPos = getCanvasPos(e);
+      let found = null;
+      for (let i = nodes.length - 1; i >= 0; i--) {
+        const n = nodes[i];
+        const dx = canvasPos.x - n.x;
+        const dy = canvasPos.y - n.y;
+        if (dx * dx + dy * dy < (n.radius + 8) * (n.radius + 8)) {
+          found = n;
+          break;
+        }
+      }
+
+      if (found) {
+        draggedNode = found;
+      } else {
+        isPanning = true;
+        panStart = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+        canvas.style.cursor = 'grabbing';
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const dist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
+      if (dist > 4) {
+        hasMovedSinceDown = true;
+      }
+
+      const canvasPos = getCanvasPos(e);
+
+      if (draggedNode) {
+        draggedNode.x = canvasPos.x;
+        draggedNode.y = canvasPos.y;
+        draggedNode.vx = 0;
+        draggedNode.vy = 0;
+      } else if (isPanning) {
+        transform.x = e.clientX - panStart.x;
+        transform.y = e.clientY - panStart.y;
+      }
+
+      // Hover check using canvasPos
+      let found = null;
+      for (let i = nodes.length - 1; i >= 0; i--) {
+        const n = nodes[i];
+        const dx = canvasPos.x - n.x;
+        const dy = canvasPos.y - n.y;
+        if (dx * dx + dy * dy < (n.radius + 8) * (n.radius + 8)) {
+          found = n;
+          break;
+        }
+      }
+
+      hoveredNode = found;
+      if (hoveredNode) {
+        canvas.style.cursor = 'pointer';
+        tooltip.style.display = 'block';
+        const rect = canvas.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+        tooltip.style.left = `${screenX + 12}px`;
+        tooltip.style.top = `${screenY + 12}px`;
+        tooltip.setText(`${hoveredNode.type.toUpperCase()}: ${hoveredNode.name}`);
+      } else {
+        canvas.style.cursor = isPanning ? 'grabbing' : 'default';
+        tooltip.style.display = 'none';
+      }
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+      isPanning = false;
+      canvas.style.cursor = hoveredNode ? 'pointer' : 'default';
+
+      if (!hasMovedSinceDown && hoveredNode) {
+        this.openEntityDetail(hoveredNode.type, hoveredNode.file);
+      }
+
+      draggedNode = null;
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      draggedNode = null;
+      isPanning = false;
+      hoveredNode = null;
+      tooltip.style.display = 'none';
+      canvas.style.cursor = 'default';
+    });
+
+    // Elegant scroll wheel zoom centered at mouse position
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const mouse = getMousePos(e);
+
+      const zoomIntensity = 0.05;
+      const factor = Math.exp(-e.deltaY * zoomIntensity * 0.015);
+      const newK = Math.max(0.15, Math.min(4, transform.k * factor));
+
+      transform.x = mouse.x - (mouse.x - transform.x) * (newK / transform.k);
+      transform.y = mouse.y - (mouse.y - transform.y) * (newK / transform.k);
+      transform.k = newK;
+    });
+
+    // Physics Engine
+    const step = () => {
+      if (!canvas.isConnected) {
+        resizeObserver.disconnect();
+        return;
+      }
+
+      // 1. Repulsion force between nodes
+      for (let i = 0; i < nodes.length; i++) {
+        const n1 = nodes[i];
+        for (let j = i + 1; j < nodes.length; j++) {
+          const n2 = nodes[j];
+          const dx = n2.x - n1.x;
+          const dy = n2.y - n1.y;
+          const distSq = dx * dx + dy * dy || 1;
+          const dist = Math.sqrt(distSq);
+          if (dist < 160) {
+            const force = (160 - dist) * 0.04;
+            const fx = (dx / dist) * force;
+            const fy = (dy / dist) * force;
+            if (n1 !== draggedNode) { n1.vx -= fx; n1.vy -= fy; }
+            if (n2 !== draggedNode) { n2.vx += fx; n2.vy += fy; }
+          }
+        }
+      }
+
+      // 2. Attraction force along links
+      links.forEach((l) => {
+        const dx = l.target.x - l.source.x;
+        const dy = l.target.y - l.source.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const desiredDist = 65;
+        const force = (dist - desiredDist) * 0.009;
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+        if (l.source !== draggedNode) { l.source.vx += fx; l.source.vy += fy; }
+        if (l.target !== draggedNode) { l.target.vx -= fx; l.target.vy -= fy; }
+      });
+
+      // 3. Gravity pulling to center & Update position
+      const cx = width / 2;
+      const cy = height / 2;
+      nodes.forEach((n) => {
+        if (n === draggedNode) return;
+
+        const dx = cx - n.x;
+        const dy = cy - n.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+        let gravity = 0.0003;
+        if (dist > 250) {
+          gravity = 0.0012; // soft pull back bounds
+        }
+
+        n.vx += dx * gravity;
+        n.vy += dy * gravity;
+
+        // Apply velocities and damp (glide damping = 0.92 for buttery smooth!)
+        n.x += n.vx;
+        n.y += n.vy;
+        n.vx *= 0.92;
+        n.vy *= 0.92;
+      });
+
+      // 4. Render
+      ctx.clearRect(0, 0, width, height);
+
+      ctx.save();
+      ctx.translate(transform.x, transform.y);
+      ctx.scale(transform.k, transform.k);
+
+      // Draw links
+      ctx.lineWidth = 0.8 / transform.k;
+      ctx.strokeStyle = 'var(--graph-line, var(--border-color, rgba(255, 255, 255, 0.08)))';
+      links.forEach((l) => {
+        ctx.beginPath();
+        ctx.moveTo(l.source.x, l.source.y);
+        ctx.lineTo(l.target.x, l.target.y);
+        ctx.stroke();
+      });
+
+      // Draw nodes
+      nodes.forEach((n) => {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+        ctx.fillStyle = typeColors[n.type] || typeColors.note;
+        ctx.fill();
+
+        // Highlight ring if hovered
+        if (n === hoveredNode) {
+          ctx.strokeStyle = 'var(--text-normal, #ffffff)';
+          ctx.lineWidth = 2 / transform.k;
+          ctx.stroke();
+        } else {
+          ctx.strokeStyle = 'var(--background-secondary)';
+          ctx.lineWidth = 1.2 / transform.k;
+          ctx.stroke();
+        }
+      });
+
+      // Draw elegant labels under nodes
+      nodes.forEach((n) => {
+        ctx.fillStyle = n === hoveredNode ? 'var(--text-normal)' : 'var(--text-muted)';
+        ctx.font = n === hoveredNode ? `bold ${9.5 / transform.k}px var(--font-interface, sans-serif)` : `${8.5 / transform.k}px var(--font-interface, sans-serif)`;
+        ctx.textAlign = 'center';
+        ctx.fillText(n.name, n.x, n.y + n.radius + 12 / transform.k);
+      });
+
+      ctx.restore();
+
+      requestAnimationFrame(step);
+    };
+
+    requestAnimationFrame(step);
   }
 
   /* ── PRM Analytics ──────────────────────── */
@@ -6340,40 +6559,44 @@ class CadenceAppView extends obsidian.ItemView {
           const extras = Object.assign({}, result.values);
           delete extras[primaryKey];
 
-          const parseAndCreateField = async (key, targetEntity = 'contact') => {
-            if (extras[key]) {
-              const rawVal = extras[key];
-              const parts = Array.isArray(rawVal) ? rawVal.map(String) : String(rawVal).split(',');
-              const names = parts.map(n => n.replace(/^\[\[|\]\]$/g, '').trim()).filter(Boolean);
-              extras[key] = names.map(n => `[[${n}]]`);
+          for (const f of def.fields) {
+            const suggestionSource = getFieldSuggestionSource(f);
+            if (suggestionSource !== 'none' && suggestionSource !== 'tags') {
+              const key = f.key;
+              if (extras[key]) {
+                const rawVal = extras[key];
+                const parts = Array.isArray(rawVal) ? rawVal.map(String) : String(rawVal).split(',');
+                const names = parts.map(n => n.replace(/^\[\[|\]\]$/g, '').trim()).filter(Boolean);
+                extras[key] = names.map(n => `[[${n}]]`);
 
-              // Auto-create missing target entity
-              for (const name of names) {
-                const targetFile = this.app.vault.getMarkdownFiles().find(f => f.basename.toLowerCase() === name.toLowerCase());
-                if (!targetFile) {
-                  try {
-                    await createEntity(this.app, targetEntity, name);
-                    const label = targetEntity === 'company' ? 'Company'
-                      : (targetEntity === 'partner' ? 'Partner'
-                        : (targetEntity === 'project' ? 'Project'
-                          : 'Contact'));
-                    new obsidian.Notice(`Created new ${label}: ${name}`);
-                  } catch (e) {
-                    console.warn(`Failed to auto-create ${targetEntity}`, e);
+                const creationSource = suggestionSource === 'history' ? 'folder:Cadence/Shared' : suggestionSource;
+                let targetEntityKey = ENTITIES[suggestionSource] ? suggestionSource : null;
+                if (suggestionSource.startsWith('folder:')) {
+                  const customFolderPath = suggestionSource.slice('folder:'.length);
+                  const normalizedPath = customFolderPath.replace(/\/+$/, '').toLowerCase();
+                  for (const [ek, edef] of Object.entries(ENTITIES)) {
+                    if (edef && edef.folder && edef.folder.replace(/\/+$/, '').toLowerCase() === normalizedPath) {
+                      targetEntityKey = ek;
+                      break;
+                    }
+                  }
+                }
+
+                for (const name of names) {
+                  const targetFile = this.app.vault.getMarkdownFiles().find(tf => tf.basename.toLowerCase() === name.toLowerCase());
+                  if (!targetFile) {
+                    try {
+                      await createEntity(this.app, creationSource, name);
+                      const label = targetEntityKey ? ENTITIES[targetEntityKey].label : 'Note';
+                      new obsidian.Notice(`Created new ${label}: ${name}`);
+                    } catch (e) {
+                      console.warn(`Failed to auto-create ${creationSource}`, e);
+                    }
                   }
                 }
               }
             }
-          };
-
-          await parseAndCreateField('owner', 'contact');
-          await parseAndCreateField('assigned', 'contact');
-          await parseAndCreateField('company', 'company');
-          await parseAndCreateField('contact', 'contact');
-          await parseAndCreateField('contacts', 'contact');
-          await parseAndCreateField('partner', 'partner');
-          await parseAndCreateField('with', 'contact');
-          await parseAndCreateField('related', 'project');
+          }
 
           if (Object.keys(extras).length) {
             await this.app.fileManager.processFrontMatter(file, (fm) => {
