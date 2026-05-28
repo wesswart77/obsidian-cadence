@@ -3605,6 +3605,9 @@ class CadenceAppView extends obsidian.ItemView {
 
     // Render each field as a labelled row
     def.fields.forEach((f) => {
+      if (f.key === 'type' && f.type !== 'enum') {
+        return; // Skip rendering the 'type' field if it is not an enum (like in Activities)
+      }
       const row = form.createDiv({ cls: 'cad-form-row' });
       row.createDiv({ cls: 'cad-form-label', text: f.label.toUpperCase() });
 
@@ -4436,6 +4439,7 @@ class CadenceAppView extends obsidian.ItemView {
 
     def.fields.forEach(f => {
       if (f.primary) return;
+      if (f.key === 'type' && f.type !== 'enum') return;
       mkMeta(f);
     });
 
@@ -4866,6 +4870,7 @@ class CadenceAppView extends obsidian.ItemView {
 
     def.fields.forEach(f => {
       if (f.primary || f.key === 'status' || f.key === 'priority') return;
+      if (f.key === 'type' && f.type !== 'enum') return;
       mkMeta(f);
     });
 
