@@ -272,6 +272,7 @@ const DEFAULT_SETTINGS = {
   dailyNoteFormat: 'YYYY-MM-DD',
   journalHeading: '## Journal',
   tasksHeading: '## Today',
+  taskManagementSystem: 'native',
   weekStartsOn: 1,
   defaultTab: 'home',
   openOnStartup: true,
@@ -454,6 +455,78 @@ function pctBand(pct) {
   if (pct < 50) return 'warn';
   if (pct < 75) return 'mint';
   return 'emerald';
+}
+
+
+/* ─────────── TaskNotes Integration Helpers ─────────── */
+function listTaskNotesTasks(app) {
+  const folderPath = "TaskNotes/Tasks";
+  const folder = app.vault.getAbstractFileByPath(folderPath);
+  if (!folder || !folder.children) return [];
+  const tasks = [];
+  const walk = (node) => {
+    for (const child of node.children) {
+      if (child.children) walk(child);
+      else if (typeof child.path === 'string' && child.path.toLowerCase().endsWith('.md')) {
+        const cache = app.metadataCache.getFileCache(child);
+        const fm = (cache && cache.frontmatter) || {};
+        tasks.push({
+          file: child,
+          title: fm.title || child.basename,
+          status: fm.status || 'open',
+          scheduled: fm.scheduled || '',
+          due: fm.due || '',
+          priority: fm.priority || 'normal',
+          projects: fm.projects || '',
+          done: fm.status === 'done'
+        });
+      }
+    }
+  };
+  walk(folder);
+  return tasks;
+}
+
+function listTaskNotesTasksForFile(app, file) {
+  const allTasks = listTaskNotesTasks(app);
+  const name = file.basename;
+  return allTasks.filter(t => {
+    if (!t.projects) return false;
+    const links = parseLinkValues(t.projects);
+    return links.some(l => l.target === name);
+  });
+}
+
+
+async function toggleTaskNotesTask(app, taskFile, checked) {
+  await app.fileManager.processFrontMatter(taskFile, (fm) => {
+    fm.status = checked ? 'done' : 'open';
+  });
+}
+
+async function appendTaskNotesTask(app, text, date = new Date()) {
+  const ymdStr = ymd(date);
+  const folderPath = "TaskNotes/Tasks";
+  await ensureFolderSync(app, folderPath);
+  
+  const cleanTitle = text.replace(/[\\/:*?"<>|]/g, '').trim();
+  let filename = `${folderPath}/${cleanTitle}.md`;
+  let file = app.vault.getAbstractFileByPath(filename);
+  let counter = 1;
+  while (file) {
+    filename = `${folderPath}/${cleanTitle} (${counter}).md`;
+    file = app.vault.getAbstractFileByPath(filename);
+    counter++;
+  }
+  
+  const content = `---
+title: ${text}
+status: open
+scheduled: ${ymdStr}
+priority: normal
+---
+`;
+  await app.vault.create(filename, content);
 }
 
 /* ─────────── Entity helpers ─────────── */
@@ -2621,6 +2694,26 @@ class CadenceAppView extends obsidian.ItemView {
   async onOpen() {
     this.containerEl.children[1].empty();
     await this.render();
+
+    // Listen to live editor changes to dynamically update Cadence views as you type
+    this.registerEvent(this.app.workspace.on('editor-change', (editor, info) => {
+      const file = info.file;
+      if (!file) return;
+
+      let shouldRender = false;
+      if (this.detailFile && file.path === this.detailFile.path) {
+        shouldRender = true;
+      } else if (this.mode === 'planner.today' && this.todayFile && file.path === this.todayFile.path) {
+        shouldRender = true;
+      }
+
+      if (shouldRender) {
+        if (this._liveRenderTimer) clearTimeout(this._liveRenderTimer);
+        this._liveRenderTimer = setTimeout(() => {
+          this.render();
+        }, 300);
+      }
+    }));
 
     this.registerEvent(this.app.vault.on('modify', (file) => {
       if (this.detailFile && file && file.path === this.detailFile.path) {
@@ -4948,9 +5041,17 @@ class CadenceAppView extends obsidian.ItemView {
   _renderTaskSection(parent, file, tasks, flashSaved, rawKey = 'Tasks') {
     const card = parent.createDiv({ cls: 'cad-pd-card' });
     const head = card.createDiv({ cls: 'cad-pd-card-head' });
-    const open = tasks.filter((t) => !t.done).length;
+    
+    let tasksList = tasks;
+    let fileTaskNotes = [];
+    if (this.plugin.settings.taskManagementSystem === 'tasknotes') {
+      fileTaskNotes = listTaskNotesTasksForFile(this.app, file);
+      tasksList = fileTaskNotes.map(t => ({ done: t.done, title: t.title }));
+    }
+
+    const open = tasksList.filter((t) => !t.done).length;
     const { cleanLabel } = parseHeaderKey(rawKey);
-    head.createDiv({ cls: 'cad-pd-card-title', text: `${cleanLabel.toUpperCase()} · ${open} open · ${tasks.length - open} done` });
+    head.createDiv({ cls: 'cad-pd-card-title', text: `${cleanLabel.toUpperCase()} · ${open} open · ${tasksList.length - open} done` });
     const addBtn = head.createEl('button', { cls: 'cad-btn cad-btn-sm', text: '+ Add' });
 
     const list = card.createDiv({ cls: 'cad-pd-checklist' });
@@ -4965,67 +5066,120 @@ class CadenceAppView extends obsidian.ItemView {
         const cb = row.createEl('input', { type: 'checkbox' });
         cb.checked = !!t.done;
         cb.addEventListener('change', async () => {
-          items[idx].done = cb.checked;
-          await this._commitTasks(file, items, flashSaved, false, rawKey);
-          const txt = (items[idx].title || '').trim();
-          if (txt) await this._propagateTaskComplete(txt, cb.checked, { kind: 'project', file });
+          if (this.plugin.settings.taskManagementSystem === 'tasknotes') {
+            const taskObj = fileTaskNotes[idx];
+            await toggleTaskNotesTask(this.app, taskObj.file, cb.checked);
+          } else {
+            items[idx].done = cb.checked;
+            await this._commitTasks(file, items, flashSaved, false, rawKey);
+            const txt = (items[idx].title || '').trim();
+            if (txt) await this._propagateTaskComplete(txt, cb.checked, { kind: 'project', file });
+          }
+          this.render();
         });
-        const titleInp = row.createEl('input', { type: 'text', cls: 'cad-pd-task-title' });
-        titleInp.value = t.title || '';
-        titleInp.placeholder = 'Task description';
-        let tt;
-        titleInp.addEventListener('input', () => {
-          clearTimeout(tt);
-          tt = setTimeout(async () => {
+
+        if (this.plugin.settings.taskManagementSystem === 'tasknotes') {
+          const taskObj = fileTaskNotes[idx];
+          const taskLink = row.createEl('a', { cls: 'cad-task-text', text: t.title || 'Untitled Task' });
+          taskLink.style.cursor = 'pointer';
+          taskLink.style.flex = '1';
+          taskLink.style.marginRight = '8px';
+          taskLink.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            this.app.workspace.openLinkText(taskObj.file.path, '', false);
+          });
+        } else {
+          const titleInp = row.createEl('input', { type: 'text', cls: 'cad-pd-task-title' });
+          titleInp.value = t.title || '';
+          titleInp.placeholder = 'Task description';
+          let tt;
+          titleInp.addEventListener('input', () => {
+            clearTimeout(tt);
+            tt = setTimeout(async () => {
+              items[idx].title = titleInp.value;
+              await this._commitTasks(file, items, flashSaved, true, rawKey);
+            }, 400);
+          });
+
+          /* Bell — set or edit a reminder linked to this task. */
+          const linked = findProjectTaskReminder(this.plugin, file.path, t.title || '');
+          const bell = row.createEl('button', {
+            cls: 'cad-btn cad-btn-sm cad-pd-task-bell' + (linked ? ' linked' : ''),
+            text: linked ? '🔔' : '🔕',
+          });
+          bell.title = linked
+            ? `Edit reminder${linked.when ? ' · ' + reminderTimeStr(linked.when) : ''}`
+            : 'Set a reminder for this task';
+          bell.addEventListener('click', async () => {
             items[idx].title = titleInp.value;
             await this._commitTasks(file, items, flashSaved, true, rawKey);
-          }, 400);
-        });
 
-        /* Bell — set or edit a reminder linked to this task. */
-        const linked = findProjectTaskReminder(this.plugin, file.path, t.title || '');
-        const bell = row.createEl('button', {
-          cls: 'cad-btn cad-btn-sm cad-pd-task-bell' + (linked ? ' linked' : ''),
-          text: linked ? '🔔' : '🔕',
-        });
-        bell.title = linked
-          ? `Edit reminder${linked.when ? ' · ' + reminderTimeStr(linked.when) : ''}`
-          : 'Set a reminder for this task';
-        bell.addEventListener('click', async () => {
-          items[idx].title = titleInp.value;
-          await this._commitTasks(file, items, flashSaved, true, rawKey);
+            const taskText = titleInp.value.trim();
+            if (!taskText) {
+              new obsidian.Notice('Add a task title first.');
+              titleInp.focus();
+              return;
+            }
+            const existing = findProjectTaskReminder(this.plugin, file.path, taskText);
+            if (existing) {
+              new CadenceReminderEditModal(this.app, this.plugin, existing).open();
+            } else {
+              new CadenceReminderEditModal(this.app, this.plugin, {
+                text: taskText,
+                when: null,
+                repeat: 'none',
+                notes: '',
+                project: file.path,
+              }, { isNew: true }).open();
+            }
+          });
+        }
 
-          const taskText = titleInp.value.trim();
-          if (!taskText) {
-            new obsidian.Notice('Add a task title first.');
-            titleInp.focus();
-            return;
-          }
-          const existing = findProjectTaskReminder(this.plugin, file.path, taskText);
-          if (existing) {
-            new CadenceReminderEditModal(this.app, this.plugin, existing).open();
-          } else {
-            new CadenceReminderEditModal(this.app, this.plugin, {
-              text: taskText,
-              when: null,
-              repeat: 'none',
-              notes: '',
-              project: file.path,
-            }, { isNew: true }).open();
-          }
-        });
-
-        const del = row.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: '×' });
-        del.addEventListener('click', async () => {
-          items.splice(idx, 1);
-          await this._commitTasks(file, items, flashSaved, false, rawKey);
-        });
+        if (this.plugin.settings.taskManagementSystem !== 'tasknotes') {
+          const del = row.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: '×' });
+          del.addEventListener('click', async () => {
+            items.splice(idx, 1);
+            await this._commitTasks(file, items, flashSaved, false, rawKey);
+          });
+        }
       });
     };
 
-    renderRows(tasks);
+    renderRows(tasksList);
 
     addBtn.addEventListener('click', async () => {
+      if (this.plugin.settings.taskManagementSystem === 'tasknotes') {
+        const text = await this._prompt({
+          title: 'Ajouter une tâche (TaskNotes)',
+          placeholder: 'Que faut-il faire ?',
+          cta: 'Ajouter',
+        });
+        if (!text) return;
+        
+        const folderPath = "TaskNotes/Tasks";
+        await ensureFolderSync(this.app, folderPath);
+        const cleanTitle = text.replace(/[\\/:*?"<>|]/g, '').trim();
+        let filename = `${folderPath}/${cleanTitle}.md`;
+        let existingFile = this.app.vault.getAbstractFileByPath(filename);
+        let counter = 1;
+        while (existingFile) {
+          filename = `${folderPath}/${cleanTitle} (${counter}).md`;
+          existingFile = this.app.vault.getAbstractFileByPath(filename);
+          counter++;
+        }
+        
+        const content = `---
+title: ${text}
+status: open
+scheduled: ${ymd(new Date())}
+projects: "[[${file.basename}]]"
+priority: normal
+---
+`;
+        await this.app.vault.create(filename, content);
+        this.render();
+        return;
+      }
       tasks.push({ done: false, title: '' });
       await this._commitTasks(file, tasks, flashSaved, false, rawKey);
     });
@@ -5053,7 +5207,7 @@ class CadenceAppView extends obsidian.ItemView {
     try { obsidian.setIcon(openBtn, 'file-text'); } catch (_) {}
     openBtn.addEventListener('click', (ev) => {
       ev.stopPropagation();
-      this.app.workspace.openLinkText(file.path, '', false);
+      this.app.workspace.openLinkText(file.path, '', 'split');
     });
 
     const body = card.createDiv({ style: 'padding: 12px; min-height: 40px; position: relative;' });
@@ -5061,22 +5215,13 @@ class CadenceAppView extends obsidian.ItemView {
     // Preview container
     const previewDiv = body.createDiv({ 
       cls: 'markdown-preview-view', 
-      style: 'padding: 0; cursor: text; min-height: 30px;' 
+      style: 'padding: 0; min-height: 30px;' 
     });
-    previewDiv.title = 'Click to edit';
     
-    // Editor container (textarea)
-    const ta = body.createEl('textarea', {
-      cls: 'cad-pd-textarea',
-      style: 'width: 100%; display: none; font-family: var(--font-monospace); min-height: 120px; padding: 8px; border: 1px solid var(--interactive-accent); border-radius: 4px; background: var(--background-primary); color: var(--text-normal); font-size: 0.95em;'
-    });
-    ta.placeholder = placeholder || 'Write something here...';
-    ta.value = initialValue;
-
     // Render the initial markdown preview
     const renderPreview = () => {
       previewDiv.empty();
-      const rawText = ta.value || '';
+      const rawText = initialValue || '';
       try {
         obsidian.MarkdownRenderer.renderMarkdown(rawText, previewDiv, file.path, this);
         
@@ -5094,52 +5239,15 @@ class CadenceAppView extends obsidian.ItemView {
       } catch (e) {
         previewDiv.setText(rawText);
       }
-      // Add subtle placeholder if empty to remain clickable
+      // Add subtle placeholder if empty
       if (!rawText.trim()) {
         const ph = previewDiv.createDiv({ 
           style: 'color: var(--text-faint); font-style: italic; font-size: 0.9em; padding: 4px 0;', 
-          text: placeholder || 'Empty section. Click to write...' 
+          text: placeholder || 'Empty section.' 
         });
       }
     };
     renderPreview();
-
-    let tmr;
-
-    const commitChanges = async () => {
-      const content = await this.app.vault.read(file);
-      const next = replaceSection(content, `## ${sectionKey}`, ta.value || '');
-      await this.app.vault.modify(file, next);
-      if (typeof flashSaved === 'function') flashSaved();
-    };
-
-    // Click to Edit (ignore if clicking a link)
-    previewDiv.addEventListener('click', (ev) => {
-      if (ev.target.closest('a')) {
-        return; // Clicked a link, do not enter edit mode
-      }
-      previewDiv.style.display = 'none';
-      ta.style.display = 'block';
-      ta.focus();
-    });
-
-    // Blur to Save and Preview
-    ta.addEventListener('blur', () => {
-      setTimeout(async () => {
-        await commitChanges();
-        renderPreview();
-        ta.style.display = 'none';
-        previewDiv.style.display = 'block';
-      }, 150);
-    });
-
-    // Auto-save on typing (debounced)
-    ta.addEventListener('input', () => {
-      clearTimeout(tmr);
-      tmr = setTimeout(async () => {
-        await commitChanges();
-      }, 800);
-    });
   }
 
   _renderProjectTextSection(parent, file, sections, def, flashSaved) {
@@ -5976,15 +6084,24 @@ class CadenceAppView extends obsidian.ItemView {
 
     /* 1. Open tasks today */
     try {
-      const file = await ensureDailyNote(this.app, settings);
-      const content = await this.app.vault.read(file);
-      const parsed = parseSections(content, settings);
-      const openTasks = parsed.tasks.filter((l) => / \[ \] /.test(l)).length;
+      let openTasks = 0;
+      if (settings.taskManagementSystem === 'tasknotes') {
+        const todayYmd = ymd(new Date());
+        const allTaskNotes = listTaskNotesTasks(this.app);
+        openTasks = allTaskNotes.filter(t => t.scheduled === todayYmd && !t.done).length;
+      } else {
+        const file = await ensureDailyNote(this.app, settings);
+        const content = await this.app.vault.read(file);
+        const parsed = parseSections(content, settings);
+        openTasks = parsed.tasks.filter((l) => / \[ \] /.test(l)).length;
+      }
       if (openTasks > 0) {
         items.push({
           icon: '🎯',
           tone: 'emerald',
-          text: `${openTasks} open ${openTasks === 1 ? 'task' : 'tasks'} on today's note`,
+          text: settings.taskManagementSystem === 'tasknotes'
+            ? `${openTasks} open ${openTasks === 1 ? 'task' : 'tasks'} scheduled for today`
+            : `${openTasks} open ${openTasks === 1 ? 'task' : 'tasks'} on today's note`,
           action: () => this.setMode('planner.today'),
         });
       }
@@ -6167,49 +6284,95 @@ class CadenceAppView extends obsidian.ItemView {
   }
 
   async _homeTodayCard(parent) {
-    const file = await ensureDailyNote(this.app, this.plugin.settings);
-    const content = await this.app.vault.read(file);
-    const parsed = parseSections(content, this.plugin.settings);
-    const open = parsed.tasks.filter((l) => / \[ \] /.test(l));
-    const done = parsed.tasks.filter((l) => / \[(x|X)\] /.test(l));
+    const settings = this.plugin.settings;
+    let tasksList = [];
+    let todayTaskNotes = [];
+    let file = null;
+    
+    if (settings.taskManagementSystem === 'tasknotes') {
+      const todayYmd = ymd(new Date());
+      const allTaskNotes = listTaskNotesTasks(this.app);
+      todayTaskNotes = allTaskNotes.filter(t => t.scheduled === todayYmd);
+      tasksList = todayTaskNotes.map(t => `- [${t.done ? 'x' : ' '}] ${t.title}`);
+    } else {
+      file = await ensureDailyNote(this.app, settings);
+      const content = await this.app.vault.read(file);
+      const parsed = parseSections(content, settings);
+      tasksList = parsed.tasks;
+    }
+
+    const open = tasksList.filter((l) => / \[ \] /.test(l));
+    const done = tasksList.filter((l) => / \[(x|X)\] /.test(l));
 
     const body = this._homeCard(parent, `TODAY — ${open.length} open · ${done.length} done`, (head) => {
       const link = head.createEl('a', { cls: 'cad-home-card-link', text: 'Open Today →' });
       link.addEventListener('click', (e) => { e.preventDefault(); this.setMode('planner.today'); });
     }, 'emerald');
 
-    if (!parsed.tasks.length) {
+    if (!tasksList.length) {
       body.createDiv({ cls: 'cad-empty', text: 'No tasks yet — add one with + Task above.' });
       return;
     }
-    parsed.tasks.forEach((rawLine, idx) => {
+
+    tasksList.forEach((rawLine, idx) => {
       const checked = / \[(x|X)\] /.test(rawLine);
       const text = rawLine.replace(/^\s*-\s\[(x|X| )\]\s/, '');
       const row = body.createDiv({ cls: 'cad-home-task' + (checked ? ' done' : '') });
       const cb = row.createEl('input', { type: 'checkbox' });
       cb.checked = checked;
       cb.addEventListener('change', async () => {
-        const cur = await this.app.vault.read(file);
-        const cp = parseSections(cur, this.plugin.settings);
-        const taskLine = cp.tasks[idx] || '';
-        const taskText = taskLine.replace(/^\s*-\s\[(x|X| )\]\s/, '').trim();
-        const newTasks = cp.tasks.map((line, i) => {
-          if (i !== idx) return line;
-          return cb.checked
-            ? line.replace(/^\s*-\s\[\s\]\s/, '- [x] ')
-            : line.replace(/^\s*-\s\[(x|X)\]\s/, '- [ ] ');
-        });
-        const next = replaceSection(cur, this.plugin.settings.tasksHeading, newTasks.join('\n'));
-        await this.app.vault.modify(file, next);
-        if (taskText) {
-          await this._propagateTaskComplete(taskText, cb.checked, { kind: 'daily', file, date: new Date() });
+        if (settings.taskManagementSystem === 'tasknotes') {
+          const taskObj = todayTaskNotes[idx];
+          await toggleTaskNotesTask(this.app, taskObj.file, cb.checked);
+        } else {
+          const cur = await this.app.vault.read(file);
+          const cp = parseSections(cur, settings);
+          const taskLine = cp.tasks[idx] || '';
+          const taskText = taskLine.replace(/^\s*-\s\[(x|X| )\]\s/, '').trim();
+          const newTasks = cp.tasks.map((line, i) => {
+            if (i !== idx) return line;
+            return cb.checked
+              ? line.replace(/^\s*-\s\[\s\]\s/, '- [x] ')
+              : line.replace(/^\s*-\s\[(x|X)\]\s/, '- [ ] ');
+          });
+          const next = replaceSection(cur, settings.tasksHeading, newTasks.join('\n'));
+          await this.app.vault.modify(file, next);
+          if (taskText) {
+            await this._propagateTaskComplete(taskText, cb.checked, { kind: 'daily', file, date: new Date() });
+          }
         }
+        this.render();
       });
-      row.createSpan({ cls: 'cad-task-text', text });
+
+      if (settings.taskManagementSystem === 'tasknotes') {
+        const taskObj = todayTaskNotes[idx];
+        const taskLink = row.createEl('a', { cls: 'cad-task-text', text });
+        taskLink.style.cursor = 'pointer';
+        taskLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          this.app.workspace.openLinkText(taskObj.file.path, '', false);
+        });
+      } else {
+        row.createSpan({ cls: 'cad-task-text', text });
+      }
 
       /* Project link button + chip */
-      const dailyPath = file.path;
-      const linkedProject = this._getTaskProjectLink(dailyPath, text);
+      let linkedProject = null;
+      if (settings.taskManagementSystem === 'tasknotes') {
+        const taskObj = todayTaskNotes[idx];
+        if (taskObj.projects) {
+          const parsed = parseLinkValues(taskObj.projects);
+          if (parsed.length > 0) {
+            const projFile = this.app.vault.getMarkdownFiles().find(f => f.basename === parsed[0].target);
+            if (projFile) {
+              linkedProject = projFile.path;
+            }
+          }
+        }
+      } else {
+        linkedProject = this._getTaskProjectLink(file.path, text);
+      }
+
       if (linkedProject) {
         const chip = row.createEl('a', { cls: 'cad-task-proj-chip', text: '📁 ' + (projectNameFromPath(this.app, linkedProject) || 'Project') });
         chip.title = 'Open linked project';
@@ -6220,12 +6383,15 @@ class CadenceAppView extends obsidian.ItemView {
           if (f && f instanceof obsidian.TFile) this.openEntityDetail('project', f);
         });
       }
-      const linkBtn = row.createEl('button', { cls: 'cad-task-link-btn' + (linkedProject ? ' linked' : ''), text: linkedProject ? '✎' : '📁' });
-      linkBtn.title = linkedProject ? 'Change linked project' : 'Link to a project';
-      linkBtn.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        this._openTaskProjectPicker(dailyPath, text, linkedProject);
-      });
+
+      if (settings.taskManagementSystem !== 'tasknotes') {
+        const linkBtn = row.createEl('button', { cls: 'cad-task-link-btn' + (linkedProject ? ' linked' : ''), text: linkedProject ? '✎' : '📁' });
+        linkBtn.title = linkedProject ? 'Change linked project' : 'Link to a project';
+        linkBtn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          this._openTaskProjectPicker(file.path, text, linkedProject);
+        });
+      }
     });
   }
 
@@ -6233,13 +6399,25 @@ class CadenceAppView extends obsidian.ItemView {
     const settings = this.plugin.settings;
     const weekStart = startOfWeek(new Date(), settings.weekStartsOn);
     let open = 0, done = 0;
-    for (let i = 0; i < 7; i++) {
-      const d = addDays(weekStart, i);
-      const f = this.app.vault.getAbstractFileByPath(dailyNotePath(settings, d));
-      if (f && f instanceof obsidian.TFile) {
-        const c = await this.app.vault.read(f);
-        const p = parseSections(c, settings);
-        p.tasks.forEach((l) => { if (/ \[(x|X)\] /.test(l)) done++; else if (/ \[ \] /.test(l)) open++; });
+    
+    if (settings.taskManagementSystem === 'tasknotes') {
+      const allTasks = listTaskNotesTasks(this.app);
+      const weekDatesList = Array.from({ length: 7 }, (_, i) => ymd(addDays(weekStart, i)));
+      allTasks.forEach((t) => {
+        if (weekDatesList.includes(t.scheduled)) {
+          if (t.done) done++;
+          else open++;
+        }
+      });
+    } else {
+      for (let i = 0; i < 7; i++) {
+        const d = addDays(weekStart, i);
+        const f = this.app.vault.getAbstractFileByPath(dailyNotePath(settings, d));
+        if (f && f instanceof obsidian.TFile) {
+          const c = await this.app.vault.read(f);
+          const p = parseSections(c, settings);
+          p.tasks.forEach((l) => { if (/ \[(x|X)\] /.test(l)) done++; else if (/ \[ \] /.test(l)) open++; });
+        }
       }
     }
     const total = open + done;
@@ -7030,6 +7208,14 @@ class CadenceAppView extends obsidian.ItemView {
   }
 
   async _quickAddTodayTask() {
+    if (this.plugin.settings.taskManagementSystem === 'tasknotes') {
+      const commandId = "tasknotes:create-new-task";
+      const hasCommand = this.app.commands && this.app.commands.commands && this.app.commands.commands[commandId];
+      if (hasCommand) {
+        this.app.commands.executeCommandById(commandId);
+        return;
+      }
+    }
     const text = await this._prompt({
       title: 'Quick add — today',
       placeholder: 'What needs doing?',
@@ -9411,6 +9597,16 @@ class CadenceAppView extends obsidian.ItemView {
     const fileContent = await this.app.vault.read(this.todayFile);
     this.todayParsed = parseSections(fileContent, this.plugin.settings);
 
+    let tasksList = [];
+    if (this.plugin.settings.taskManagementSystem === 'tasknotes') {
+      const todayYmd = ymd(new Date());
+      const allTaskNotes = listTaskNotesTasks(this.app);
+      this.todayTaskNotes = allTaskNotes.filter(t => t.scheduled === todayYmd);
+      tasksList = this.todayTaskNotes.map(t => `- [${t.done ? 'x' : ' '}] ${t.title}`);
+    } else {
+      tasksList = this.todayParsed.tasks;
+    }
+
     const info = dateInfo();
     root.createDiv({ cls: 'cad-eyebrow', text: info.weekday.toUpperCase() });
     const hero = root.createDiv({ cls: 'cad-date-hero' });
@@ -9419,7 +9615,7 @@ class CadenceAppView extends obsidian.ItemView {
     monthCol.createDiv({ cls: 'cad-month', text: info.month });
     monthCol.createDiv({ cls: 'cad-year', text: String(info.year) });
 
-    const taskCount = this.todayParsed.tasks.filter((l) => / \[ \] /.test(l)).length;
+    const taskCount = tasksList.filter((l) => / \[ \] /.test(l)).length;
     root.createDiv({
       cls: 'cad-greet',
       text: taskCount === 0
@@ -9431,25 +9627,51 @@ class CadenceAppView extends obsidian.ItemView {
     const taskSection = root.createDiv({ cls: 'cad-section' });
     const taskLabel = taskSection.createDiv({ cls: 'cad-section-label' });
     taskLabel.createSpan({ text: 'TODAY' });
-    const total = this.todayParsed.tasks.length;
-    const open = this.todayParsed.tasks.filter((l) => / \[ \] /.test(l)).length;
+    const total = tasksList.length;
+    const open = tasksList.filter((l) => / \[ \] /.test(l)).length;
     taskLabel.createSpan({ cls: 'cad-count', text: `${open} open · ${total - open} done` });
 
-    if (!this.todayParsed.tasks.length) {
+    if (!tasksList.length) {
       taskSection.createDiv({ cls: 'cad-empty', text: 'No tasks in today\'s note yet.' });
     } else {
       const dailyPath = this.todayFile.path;
-      this.todayParsed.tasks.forEach((rawLine, idx) => {
+      tasksList.forEach((rawLine, idx) => {
         const checked = / \[(x|X)\] /.test(rawLine);
         const text = rawLine.replace(/^\s*-\s\[(x|X| )\]\s/, '');
         const row = taskSection.createDiv({ cls: 'cad-task-row' + (checked ? ' done' : '') });
         const cb = row.createEl('input', { type: 'checkbox' });
         cb.checked = checked;
         cb.addEventListener('change', () => this.toggleTodayTask(idx, cb.checked));
-        row.createSpan({ cls: 'cad-task-text', text });
+
+        if (this.plugin.settings.taskManagementSystem === 'tasknotes') {
+          const taskObj = this.todayTaskNotes[idx];
+          const taskSpan = row.createEl('a', { cls: 'cad-task-text', text });
+          taskSpan.style.cursor = 'pointer';
+          taskSpan.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            this.app.workspace.openLinkText(taskObj.file.path, '', false);
+          });
+        } else {
+          row.createSpan({ cls: 'cad-task-text', text });
+        }
 
         /* Project link — chip if linked, then a button */
-        const linkedProject = this._getTaskProjectLink(dailyPath, text);
+        let linkedProject = null;
+        if (this.plugin.settings.taskManagementSystem === 'tasknotes') {
+          const taskObj = this.todayTaskNotes[idx];
+          if (taskObj.projects) {
+            const parsed = parseLinkValues(taskObj.projects);
+            if (parsed.length > 0) {
+              const projFile = this.app.vault.getMarkdownFiles().find(f => f.basename === parsed[0].target);
+              if (projFile) {
+                linkedProject = projFile.path;
+              }
+            }
+          }
+        } else {
+          linkedProject = this._getTaskProjectLink(dailyPath, text);
+        }
+
         if (linkedProject) {
           const chip = row.createEl('a', { cls: 'cad-task-proj-chip', text: '📁 ' + (projectNameFromPath(this.app, linkedProject) || 'Project') });
           chip.title = 'Open linked project';
@@ -9460,12 +9682,15 @@ class CadenceAppView extends obsidian.ItemView {
             if (file && file instanceof obsidian.TFile) this.openEntityDetail('project', file);
           });
         }
-        const linkBtn = row.createEl('button', { cls: 'cad-task-link-btn' + (linkedProject ? ' linked' : ''), text: linkedProject ? '✎' : '📁' });
-        linkBtn.title = linkedProject ? 'Change linked project' : 'Link to a project';
-        linkBtn.addEventListener('click', (ev) => {
-          ev.stopPropagation();
-          this._openTaskProjectPicker(dailyPath, text, linkedProject);
-        });
+        
+        if (this.plugin.settings.taskManagementSystem !== 'tasknotes') {
+          const linkBtn = row.createEl('button', { cls: 'cad-task-link-btn' + (linkedProject ? ' linked' : ''), text: linkedProject ? '✎' : '📁' });
+          linkBtn.title = linkedProject ? 'Change linked project' : 'Link to a project';
+          linkBtn.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            this._openTaskProjectPicker(dailyPath, text, linkedProject);
+          });
+        }
       });
     }
 
@@ -9513,30 +9738,41 @@ class CadenceAppView extends obsidian.ItemView {
   }
 
   async toggleTodayTask(idx, checked) {
-    const content = await this.app.vault.read(this.todayFile);
-    const parsed = parseSections(content, this.plugin.settings);
-    const taskLine = parsed.tasks[idx] || '';
-    const taskText = taskLine.replace(/^\s*-\s\[(x|X| )\]\s/, '').trim();
-    const newTasks = parsed.tasks.map((line, i) => {
-      if (i !== idx) return line;
-      return checked
-        ? line.replace(/^\s*-\s\[\s\]\s/, '- [x] ')
-        : line.replace(/^\s*-\s\[(x|X)\]\s/, '- [ ] ');
-    });
-    const newContent = replaceSection(content, this.plugin.settings.tasksHeading, newTasks.join('\n'));
-    await this.app.vault.modify(this.todayFile, newContent);
-    if (taskText) {
-      await this._propagateTaskComplete(taskText, checked, { kind: 'daily', file: this.todayFile, date: new Date() });
+    if (this.plugin.settings.taskManagementSystem === 'tasknotes') {
+      if (this.todayTaskNotes && this.todayTaskNotes[idx]) {
+        const taskObj = this.todayTaskNotes[idx];
+        await toggleTaskNotesTask(this.app, taskObj.file, checked);
+      }
+    } else {
+      const content = await this.app.vault.read(this.todayFile);
+      const parsed = parseSections(content, this.plugin.settings);
+      const taskLine = parsed.tasks[idx] || '';
+      const taskText = taskLine.replace(/^\s*-\s\[(x|X| )\]\s/, '').trim();
+      const newTasks = parsed.tasks.map((line, i) => {
+        if (i !== idx) return line;
+        return checked
+          ? line.replace(/^\s*-\s\[\s\]\s/, '- [x] ')
+          : line.replace(/^\s*-\s\[(x|X)\]\s/, '- [ ] ');
+      });
+      const newContent = replaceSection(content, this.plugin.settings.tasksHeading, newTasks.join('\n'));
+      await this.app.vault.modify(this.todayFile, newContent);
+      if (taskText) {
+        await this._propagateTaskComplete(taskText, checked, { kind: 'daily', file: this.todayFile, date: new Date() });
+      }
     }
     this.render();
   }
 
   async appendTodayTask(text) {
-    const content = await this.app.vault.read(this.todayFile);
-    const parsed = parseSections(content, this.plugin.settings);
-    const newTasks = [...parsed.tasks, `- [ ] ${text}`];
-    const newContent = replaceSection(content, this.plugin.settings.tasksHeading, newTasks.join('\n'));
-    await this.app.vault.modify(this.todayFile, newContent);
+    if (this.plugin.settings.taskManagementSystem === 'tasknotes') {
+      await appendTaskNotesTask(this.app, text, new Date());
+    } else {
+      const content = await this.app.vault.read(this.todayFile);
+      const parsed = parseSections(content, this.plugin.settings);
+      const newTasks = [...parsed.tasks, `- [ ] ${text}`];
+      const newContent = replaceSection(content, this.plugin.settings.tasksHeading, newTasks.join('\n'));
+      await this.app.vault.modify(this.todayFile, newContent);
+    }
     this.render();
   }
 
@@ -9570,16 +9806,37 @@ class CadenceAppView extends obsidian.ItemView {
     mkBtn('▶', () => { this.plannerAnchor = addDays(this.plannerAnchor, 7); this.render(); });
 
     let totalOpen = 0, totalDone = 0;
-    const dayData = await Promise.all(days.map(async (d) => {
-      const path = dailyNotePath(settings, d);
-      const file = this.app.vault.getAbstractFileByPath(path);
-      if (!file || !(file instanceof obsidian.TFile)) {
-        return { date: d, path, exists: false, tasks: [] };
-      }
-      const content = await this.app.vault.read(file);
-      const parsed = parseSections(content, settings);
-      return { date: d, path, exists: true, file, tasks: parsed.tasks };
-    }));
+    let dayData = [];
+    
+    if (settings.taskManagementSystem === 'tasknotes') {
+      const allTasks = listTaskNotesTasks(this.app);
+      dayData = days.map((d) => {
+        const ymdStr = ymd(d);
+        const path = dailyNotePath(settings, d);
+        const file = this.app.vault.getAbstractFileByPath(path);
+        const tasksForDay = allTasks.filter(t => t.scheduled === ymdStr);
+        return {
+          date: d,
+          path,
+          exists: !!file,
+          file,
+          tasks: tasksForDay.map(t => `- [${t.done ? 'x' : ' '}] ${t.title}`),
+          rawTasks: tasksForDay
+        };
+      });
+    } else {
+      dayData = await Promise.all(days.map(async (d) => {
+        const path = dailyNotePath(settings, d);
+        const file = this.app.vault.getAbstractFileByPath(path);
+        if (!file || !(file instanceof obsidian.TFile)) {
+          return { date: d, path, exists: false, tasks: [] };
+        }
+        const content = await this.app.vault.read(file);
+        const parsed = parseSections(content, settings);
+        return { date: d, path, exists: true, file, tasks: parsed.tasks };
+      }));
+    }
+
     dayData.forEach((d) => {
       d.tasks.forEach((l) => {
         if (/ \[(x|X)\] /.test(l)) totalDone++;
@@ -9632,28 +9889,46 @@ class CadenceAppView extends obsidian.ItemView {
           const cb = row.createEl('input', { type: 'checkbox' });
           cb.checked = checked;
           cb.addEventListener('change', () => this.togglePlannerTask(d, idx, cb.checked));
-          row.createSpan({ text });
+
+          if (settings.taskManagementSystem === 'tasknotes') {
+            const taskObj = d.rawTasks[idx];
+            const taskSpan = row.createEl('a', { text });
+            taskSpan.style.cursor = 'pointer';
+            taskSpan.addEventListener('click', (ev) => {
+              ev.preventDefault();
+              this.app.workspace.openLinkText(taskObj.file.path, '', false);
+            });
+          } else {
+            row.createSpan({ text });
+          }
         });
       }
     });
   }
 
   async togglePlannerTask(day, idx, checked) {
-    if (!day.file) return;
-    const content = await this.app.vault.read(day.file);
-    const parsed = parseSections(content, this.plugin.settings);
-    const taskLine = parsed.tasks[idx] || '';
-    const taskText = taskLine.replace(/^\s*-\s\[(x|X| )\]\s/, '').trim();
-    const newTasks = parsed.tasks.map((line, i) => {
-      if (i !== idx) return line;
-      return checked
-        ? line.replace(/^\s*-\s\[\s\]\s/, '- [x] ')
-        : line.replace(/^\s*-\s\[(x|X)\]\s/, '- [ ] ');
-    });
-    const newContent = replaceSection(content, this.plugin.settings.tasksHeading, newTasks.join('\n'));
-    await this.app.vault.modify(day.file, newContent);
-    if (taskText) {
-      await this._propagateTaskComplete(taskText, checked, { kind: 'daily', file: day.file, date: day.date });
+    if (this.plugin.settings.taskManagementSystem === 'tasknotes') {
+      if (day.rawTasks && day.rawTasks[idx]) {
+        const taskObj = day.rawTasks[idx];
+        await toggleTaskNotesTask(this.app, taskObj.file, checked);
+      }
+    } else {
+      if (!day.file) return;
+      const content = await this.app.vault.read(day.file);
+      const parsed = parseSections(content, this.plugin.settings);
+      const taskLine = parsed.tasks[idx] || '';
+      const taskText = taskLine.replace(/^\s*-\s\[(x|X| )\]\s/, '').trim();
+      const newTasks = parsed.tasks.map((line, i) => {
+        if (i !== idx) return line;
+        return checked
+          ? line.replace(/^\s*-\s\[\s\]\s/, '- [x] ')
+          : line.replace(/^\s*-\s\[(x|X)\]\s/, '- [ ] ');
+      });
+      const newContent = replaceSection(content, this.plugin.settings.tasksHeading, newTasks.join('\n'));
+      await this.app.vault.modify(day.file, newContent);
+      if (taskText) {
+        await this._propagateTaskComplete(taskText, checked, { kind: 'daily', file: day.file, date: day.date });
+      }
     }
     this.render();
   }
@@ -9740,6 +10015,53 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
 
     /* ─── App ─── */
     containerEl.createEl('h3', { text: 'App' });
+
+    new obsidian.Setting(containerEl)
+      .setName('Système de gestion des tâches')
+      .setDesc('Choisissez entre le gestionnaire natif de Cadence (utilisant les notes quotidiennes) ou le plugin externe TaskNotes.')
+      .addDropdown((d) => d
+        .addOption('native', 'Natif (Cadence)')
+        .addOption('tasknotes', 'TaskNotes')
+        .setValue(this.plugin.settings.taskManagementSystem || 'native')
+        .onChange(async (v) => {
+          this.plugin.settings.taskManagementSystem = v;
+          await this.plugin.saveSettings();
+          this.display();
+          this.plugin.refreshOpenViews();
+        }));
+
+    if (this.plugin.settings.taskManagementSystem === 'tasknotes') {
+      const isTaskNotesActive = this.app.plugins.enabledPlugins.has("tasknotes");
+      const statusSetting = new obsidian.Setting(containerEl);
+      if (isTaskNotesActive) {
+        statusSetting
+          .setName('Statut TaskNotes')
+          .setDesc('TaskNotes est actuellement installé, activé et connecté avec succès à Cadence.');
+        const statusSpan = statusSetting.controlEl.createSpan({
+          text: '🟢 Actif et Connecté'
+        });
+        statusSpan.style.color = '#27ae60';
+        statusSpan.style.fontWeight = 'bold';
+      } else {
+        statusSetting
+          .setName('TaskNotes non détecté')
+          .setDesc("Le plugin TaskNotes n'est pas activé ou installé dans votre coffre Obsidian.");
+        const statusSpan = statusSetting.controlEl.createSpan({
+          text: '🔴 Inactif / Non installé'
+        });
+        statusSpan.style.color = '#c0392b';
+        statusSpan.style.fontWeight = 'bold';
+        
+        new obsidian.Setting(containerEl)
+          .setName('Télécharger TaskNotes')
+          .setDesc("Cliquez sur le bouton ci-dessous pour ouvrir la page GitHub du plugin TaskNotes afin de l'installer dans votre Obsidian.")
+          .addButton((btn) => btn
+            .setButtonText('Ouvrir GitHub')
+            .onClick(() => {
+              window.open('https://github.com/callumalpass/obsidian-tasknotes', '_blank');
+            }));
+      }
+    }
 
     new obsidian.Setting(containerEl)
       .setName('Daily note folder')
