@@ -105,6 +105,71 @@ Settings → Cadence:
 
 ---
 
+## Customizing Entity Properties
+
+Cadence lets you define custom frontmatter properties for any of your core entities (**Contact, Company, Project, Deal, Activity, Partner, etc.**) to model your specific business workflows directly inside Obsidian.
+
+Settings → Cadence → **Custom Entities Properties**:
+
+### 1. Custom Property Types
+* **`text`** — Standard text input field.
+* **`multitext`** — Chip-based multi-select tag input.
+* **`enum`** — Dropdown menu with custom option lists.
+* **`date`** — Native calendar date selector.
+* **`tags`** — Tag chips synced directly with Obsidian's global tag index.
+* **`currency`** — Automated financial values formatted according to your selected active currency.
+
+### 2. Autocomplete & Suggestion Sources
+List properties (`multitext`) can pull autocomplete suggestions dynamically from:
+* **`folder:Path/To/Folder`** — Dynamically scans the specified vault folder. Suggests existing note basenames (e.g. `folder:Cadence/Contacts` maps contacts).
+* **`history`** — Scans your existing notes to suggest any values previously entered. Saves values as plain-text lists instead of Obsidian wikilinks.
+* **`tags`** — Pulls tags directly from Obsidian's global cache.
+* **`none`** — Simple custom list inputs without suggestions.
+
+### 3. Background Entity Auto-Creation
+When a property has a suggestion source pointing to a vault folder (e.g. `folder:Cadence/Contacts` or `folder:Cadence/Shared`), **Cadence automatically creates the referenced note in the background** when you assign a new name. It formats the link as a native Obsidian `[[Wikilink]]` and populates the frontmatter immediately, saving manual overhead.
+
+### 4. Loop-Safe Bidirectional Sync
+Core relationships (like **Project** ↔ **Contact**) are bidirectionally synchronized between frontmatter sheets in a loop-safe manner:
+* Assigning a contact to a project's `owner` property automatically adds the project to that contact's `project` property.
+* **Symmetric Removals:** Clearing a project from a contact's sheet or a contact from a project's properties instantly dissociates them on both sides.
+* **Physical Deletion Sync:** Deleting a Project note entirely triggers a vault-wide background cleanup that removes all stale references from your Contacts' frontmatter automatically.
+
+### 5. Drag-and-Drop Reordering & System Locks
+* **Visual Reordering:** Use the grab handle (`⋮⋮`) to drag-and-drop properties to rearrange their visual layout order inside detail sheets and lists.
+* **System Locks (`🔒`) :** Critical properties required for Cadence's system engines (such as the Primary field, Type, or Status) are secured. Reordering attempts that shift a locked field from its original index are safely rejected to preserve layout integrity.
+
+### 6. Interactive & Configurable Kanban Board Grouping
+* **Dynamic Grouping Selector:** Any Kanban view displays a stylish "Group columns by" selector in the filters bar. You can dynamically group your board columns by any `enum`, `text`, `multitext`, or `tags` property.
+* **On-the-Fly Column Extraction:** When grouping by a list/text property (such as `project`), Cadence scans all entity files to extract and clean unique values (stripping Obsidian brackets) to build your board columns automatically.
+* **Smart Drag-and-Drop Drops:** Moving cards between dynamically grouped columns updates list-based frontmatter properties (handling wikilinks and plain text list items appropriately).
+
+### 7. Custom Dashboards & Analytics Widgets
+* **Cross-Module Analytics:** Custom dashboard charts can be added to the bottom of the **Projects Dashboard**, **CRM Dashboard (Deals)**, and **PRM Dashboard (Partners)**.
+* **Flexible Visualization:** Supports visualizing any property in Donut, Bar, KPI Grid, or Simple List layout, featuring full drag-and-drop status counters and segment alignment.
+
+## Templates & Dynamic Section Blocks
+
+Cadence goes beyond standard properties by giving you a **visual layout and H2 section editor** for each of your entities:
+
+* **Entity Templates (`Cadence/Templates/`)** — Every entity has a template file (e.g. `Cadence/Templates/project.md` or `Cadence/Templates/contact.md`). These templates define the visual markdown structure of any newly created item, including standard H2 sections (like `## Notes`, `## Scope`, `## Bio`). You can easily reset any template to default or customize it in the **Templates Dashboard** (`Settings` → `Templates`).
+* **Drag-and-Drop Section Reordering** — In the **Templates Dashboard**, you can visually drag-and-drop the dynamic H2 sections of any template to rearrange their layout order. Moving cards reorders the H2 blocks inside the markdown template file automatically.
+* **Dynamic Markdown Blocks Rendering** — Inside any entity detail page (e.g., a specific Project sheet), H2 headers with custom tags like `#notes` are parsed and rendered as premium cards with rich markdown previews. Any links inside these markdown cards are fully clickable, automatically opening target entities or wiki-links inside Obsidian.
+* **Live Side-by-Side Editing** — Click the edit button (file icon) on any block to open it in a **split pane to the right** to edit natively using full Live Preview and auto-complete in Obsidian, with real-time dynamic refresh as you type.
+* **Dynamic Cross-References Table/Kanban** — You can link related entities directly (e.g., showing all Contacts related to a Company, or all Deals belonging to a Project). In the template, tags like `#cross-contact-company-table` or `#cross-deal-company-kanban` automatically query, render, and filter related items inside tables or interactive Kanban boards within the sheet!
+
+---
+
+## TaskNotes Integration
+
+For advanced task management, Cadence natively integrates with the popular **[TaskNotes](https://github.com/callumalpass/obsidian-tasknotes)** community plugin.
+
+* **Seamless Toggle** — Switch from Cadence's native daily-note task manager to TaskNotes anytime via **Settings → Cadence → Task management system** dropdown.
+* **Unified Interface** — When active, your TaskNotes folders and task files (`TaskNotes/Tasks/...`) are displayed inline throughout Cadence, including in the **Today** planner sheet and within individual projects.
+* **Bi-directional Sync** — Checking tasks off inside Cadence instantly updates the frontmatter of your TaskNotes files (`status: done` ↔ `status: open`) and vice versa, in real time!
+
+---
+
 ## Hotkeys
 
 | Action | Shortcut |

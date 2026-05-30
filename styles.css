@@ -1761,3 +1761,274 @@ select.cad-form-input { appearance: auto; padding-right: 28px; }
   color: var(--text-muted); text-align: center;
   border-top: 1px dashed var(--background-modifier-border);
 }
+
+/* ─────────── Custom Entity Properties Editor ─────────── */
+.cad-prop-editor-container {
+  margin-top: 16px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 10px;
+  padding: 20px;
+}
+.cad-prop-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+.cad-prop-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  border-bottom: 2px solid var(--background-modifier-border);
+  font-weight: 600;
+}
+.cad-prop-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  vertical-align: middle;
+}
+.cad-prop-table tr:hover td {
+  background: var(--background-modifier-hover);
+}
+.cad-prop-input {
+  width: 100%;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--text-normal);
+  font-size: 13px;
+}
+.cad-prop-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+}
+.cad-prop-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--background-secondary);
+}
+.cad-prop-btn-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+.cad-prop-btn-add:hover {
+  opacity: 0.9;
+}
+.cad-prop-btn-delete {
+  background: transparent;
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-error, #c0392b);
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+.cad-prop-btn-delete:hover {
+  background: var(--text-error, #c0392b);
+  color: #fff;
+  border-color: var(--text-error, #c0392b);
+}
+.cad-prop-btn-delete:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--background-modifier-border);
+}
+.cad-prop-hint {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 4px;
+}
+
+/* ─── Property editor — technical key autocomplete ─── */
+.cad-key-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.cad-key-wrap .cad-prop-input {
+  width: 100%;
+}
+
+/* ─── Property editor — source / folder picker ─── */
+.cad-source-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+.cad-source-wrap .cad-prop-input {
+  width: 100%;
+}
+
+/* ─── Property editor — folder picker row ─── */
+.cad-folder-picker-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.cad-folder-badge {
+  flex: 1;
+  font-size: 12px;
+  font-family: var(--font-monospace);
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 3px 6px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 5px;
+  min-width: 0;
+}
+.cad-folder-pick-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+/* ─── Disabled options cell — greyed out clearly ─── */
+.cad-prop-input:disabled[placeholder="—"] {
+  background: var(--background-secondary);
+  color: var(--text-faint);
+  border-color: transparent;
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ─── Drag and Drop Properties Reordering ─── */
+.cad-prop-drag-header {
+  width: 40px;
+  text-align: center !important;
+}
+.cad-prop-drag-cell {
+  text-align: center;
+  padding: 10px 4px !important;
+  user-select: none;
+}
+.cad-prop-drag-handle {
+  cursor: grab;
+  color: var(--text-faint);
+  font-size: 16px;
+  font-weight: bold;
+  display: inline-block;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 100ms ease, color 100ms ease;
+}
+.cad-prop-drag-handle:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+.cad-prop-drag-handle:active {
+  cursor: grabbing;
+}
+.cad-prop-lock-icon {
+  color: var(--text-muted);
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+/* Drag State Styling */
+.cad-prop-row-draggable {
+  transition: transform 150ms ease, background-color 150ms ease;
+}
+.cad-prop-row.cad-drag-active {
+  opacity: 0.4;
+  border: 1px dashed var(--interactive-accent);
+  background: var(--background-secondary-alt);
+}
+.cad-prop-row.cad-drag-hover {
+  background-color: var(--background-modifier-hover);
+  box-shadow: inset 0 2px 0 var(--interactive-accent), inset 0 -2px 0 var(--interactive-accent);
+}
+.cad-prop-row-locked {
+  background: var(--background-secondary-alt);
+  opacity: 0.95;
+}
+
+/* ─────────── Premium Template Tiles ─────────── */
+.cad-template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+  padding: 24px 32px;
+}
+.cad-template-tile {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), 
+              box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), 
+              border-color 0.2s ease;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+  overflow: hidden;
+}
+.cad-template-tile:hover {
+  transform: translateY(-4px);
+  border-color: var(--interactive-accent);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.07);
+}
+.cad-template-tile::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--interactive-accent);
+  opacity: 0.85;
+}
+.cad-template-tile[data-entity="project"]::before { background: oklch(0.62 0.17 290); }
+.cad-template-tile[data-entity="deal"]::before { background: oklch(0.65 0.14 150); }
+.cad-template-tile[data-entity="contact"]::before { background: oklch(0.6 0.16 220); }
+.cad-template-tile[data-entity="company"]::before { background: oklch(0.55 0.15 30); }
+.cad-template-tile[data-entity="partner"]::before { background: oklch(0.7 0.13 80); }
+.cad-template-tile[data-entity="activity"]::before { background: oklch(0.6 0.18 340); }
+.cad-template-tile[data-entity="daily"]::before { background: oklch(0.75 0.15 85); }
+
+.cad-template-tile-icon {
+  font-size: 1.6em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--background-secondary);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.cad-template-tile:hover .cad-template-tile-icon {
+  background: var(--background-modifier-hover);
+  transform: scale(1.05);
+}
+
