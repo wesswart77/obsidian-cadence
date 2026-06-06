@@ -2269,14 +2269,14 @@ class CadenceWidgetCreateModal extends obsidian.Modal {
     contentEl.createEl('h3', { text: 'Add Custom Chart Widget' });
 
     // 1. Title
-    contentEl.createEl('label', { text: 'Chart Title:', style: 'display: block; font-weight: 500; font-size: 0.85em; margin-bottom: 4px; margin-top: 12px;' });
+    contentEl.createEl('label', { text: 'Chart Title:', attr: { style: 'display: block; font-weight: 500; font-size: 0.85em; margin-bottom: 4px; margin-top: 12px;' } });
     const inputTitle = contentEl.createEl('input', { type: 'text', placeholder: `e.g. ${this.entityKey.toUpperCase()} by Group` });
     inputTitle.style.width = '100%';
     inputTitle.style.padding = '6px 8px';
 
     // 2. Property to group by
     const entityLabel = ENTITIES[this.entityKey] ? (ENTITIES[this.entityKey].plural || this.entityKey) : this.entityKey;
-    contentEl.createEl('label', { text: `Group ${entityLabel.toUpperCase()} by Property:`, style: 'display: block; font-weight: 500; font-size: 0.85em; margin-bottom: 4px; margin-top: 12px;' });
+    contentEl.createEl('label', { text: `Group ${entityLabel.toUpperCase()} by Property:`, attr: { style: 'display: block; font-weight: 500; font-size: 0.85em; margin-bottom: 4px; margin-top: 12px;' }});
     const selectProp = contentEl.createEl('select');
     selectProp.style.width = '100%';
     selectProp.style.padding = '6px 8px';
@@ -2292,7 +2292,7 @@ class CadenceWidgetCreateModal extends obsidian.Modal {
     });
 
     // 3. Chart Style
-    contentEl.createEl('label', { text: 'Chart Style:', style: 'display: block; font-weight: 500; font-size: 0.85em; margin-bottom: 4px; margin-top: 12px;' });
+    contentEl.createEl('label', { text: 'Chart Style:', attr: { style: 'display: block; font-weight: 500; font-size: 0.85em; margin-bottom: 4px; margin-top: 12px;' } });
     const selectStyle = contentEl.createEl('select');
     selectStyle.style.width = '100%';
     selectStyle.style.padding = '6px 8px';
@@ -2360,7 +2360,7 @@ class CadenceCrossSectionModal extends obsidian.Modal {
     contentEl.addClass('cad-prompt-modal');
     contentEl.createEl('h3', { text: 'Add Cross-Linked Section' });
 
-    contentEl.createEl('label', { text: 'Target Entity to display:', style: 'display: block; font-weight: 500; font-size: 0.85em; margin-bottom: 4px; margin-top: 12px;' });
+    contentEl.createEl('label', { text: 'Target Entity to display:', attr: { style: 'display: block; font-weight: 500; font-size: 0.85em; margin-bottom: 4px; margin-top: 12px;' } });
     const selectTarget = contentEl.createEl('select');
     selectTarget.style.width = '100%';
     selectTarget.style.padding = '6px 8px';
@@ -2374,7 +2374,7 @@ class CadenceCrossSectionModal extends obsidian.Modal {
       selectTarget.createEl('option', { value: key, text: def.plural });
     });
 
-    contentEl.createEl('label', { text: 'Linked Field (in target entity):', style: 'display: block; font-weight: 500; font-size: 0.85em; margin-bottom: 4px; margin-top: 12px;' });
+    contentEl.createEl('label', { text: 'Linked Field (in target entity):', attr: { style: 'display: block; font-weight: 500; font-size: 0.85em; margin-bottom: 4px; margin-top: 12px;' } });
     const selectField = contentEl.createEl('select');
     selectField.style.width = '100%';
     selectField.style.padding = '6px 8px';
@@ -2397,7 +2397,7 @@ class CadenceCrossSectionModal extends obsidian.Modal {
     selectTarget.addEventListener('change', populateFields);
     populateFields();
 
-    contentEl.createEl('label', { text: 'Display View Layout:', style: 'display: block; font-weight: 500; font-size: 0.85em; margin-bottom: 4px; margin-top: 12px;' });
+    contentEl.createEl('label', { text: 'Display View Layout:', attr: { style: 'display: block; font-weight: 500; font-size: 0.85em; margin-bottom: 4px; margin-top: 12px;' } });
     const selectView = contentEl.createEl('select');
     selectView.style.width = '100%';
     selectView.style.padding = '6px 8px';
@@ -2522,7 +2522,7 @@ class CadenceChartSectionModal extends obsidian.Modal {
     ].forEach(opt => selStyle2.createEl('option', { value: opt.value, text: opt.text }));
 
     // Buttons
-    const row = contentEl.createDiv({ style: 'display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px;' });
+    const row = contentEl.createDiv({ attr: { style: 'display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px;' } });
     row.createEl('button', { text: 'Cancel' }).addEventListener('click', () => this.close());
     const ok = row.createEl('button', { text: 'Add Chart', cls: 'mod-cta' });
     ok.addEventListener('click', () => {
@@ -3140,8 +3140,8 @@ class CadenceAppView extends obsidian.ItemView {
     if (layout === 'kanban') {
       const kanbanFields = def.fields.filter(field => !field.primary && ['enum', 'text', 'multitext', 'tags'].includes(field.type));
       if (kanbanFields.length > 0) {
-        const groupSelectWrap = controls.createDiv({ style: 'display: inline-flex; align-items: center; gap: 6px; margin-left: auto;' });
-        groupSelectWrap.createSpan({ text: 'Group columns by:', style: 'font-size: 0.85em; color: var(--text-muted); font-weight: 600;' });
+        const groupSelectWrap = controls.createDiv({ attr: { style: 'display: inline-flex; align-items: center; gap: 6px; margin-left: auto;' } });
+        groupSelectWrap.createSpan({ text: 'Group columns by:', attr: { style: 'font-size: 0.85em; color: var(--text-muted); font-weight: 600;' } });
         const groupSelect = groupSelectWrap.createEl('select', { cls: 'cad-prop-input' });
         groupSelect.style.padding = '6px 10px';
         groupSelect.style.height = 'auto';
@@ -3573,7 +3573,7 @@ class CadenceAppView extends obsidian.ItemView {
                   const formatted = fmtValue(val, f.type);
                   const fieldDiv = metaRow.createDiv();
                   fieldDiv.style.marginBottom = '2px';
-                  fieldDiv.createSpan({ text: `${f.label}: `, style: 'font-weight: 500; color: var(--text-muted);' });
+                  fieldDiv.createSpan({ text: `${f.label}: `, attr: { style: 'font-weight: 500; color: var(--text-muted);' }});
 
                   const isLinkProperty = f.key === 'company' || f.key === 'contact' || f.key === 'partner' || f.key === 'owner' || f.key === 'project' || (f.suggestionSource && f.suggestionSource.startsWith('folder:'));
                   if (isLinkProperty) {
@@ -4599,7 +4599,7 @@ class CadenceAppView extends obsidian.ItemView {
     });
 
     // Render Cross Sections
-    const crossSectionContainer = root.createDiv({ style: 'padding: 0 32px;' });
+    const crossSectionContainer = root.createDiv({ attr: { style: 'padding: 0 32px;' } });
     this._renderCrossSections(crossSectionContainer, 'company', titleVal);
   }
 
@@ -5062,7 +5062,7 @@ class CadenceAppView extends obsidian.ItemView {
     });
 
     // Render Cross Sections
-    const crossSectionContainer = root.createDiv({ style: 'padding: 0 32px; width: 100%; clear: both;' });
+    const crossSectionContainer = root.createDiv({ attr: { style: 'padding: 0 32px; width: 100%; clear: both;' } });
     this._renderCrossSections(crossSectionContainer, 'project', titleVal);
   }
 
@@ -5349,10 +5349,7 @@ priority: normal
     const head = card.createDiv({ cls: 'cad-pd-card-head' });
     head.createDiv({ cls: 'cad-pd-card-title', text: label });
 
-    const openBtn = head.createEl('button', {
-      cls: 'cad-btn cad-btn-sm',
-      style: 'margin-left: auto; padding: 4px 6px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px solid var(--border-color); background: transparent; cursor: pointer;'
-    });
+    const openBtn = head.createEl('button', { cls: 'cad-btn cad-btn-sm', attr: { style: 'margin-left: auto; padding: 4px 6px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px solid var(--border-color); background: transparent; cursor: pointer;' } });
     openBtn.title = 'Open this note natively to edit with full Live Preview & Autocomplete';
     try { obsidian.setIcon(openBtn, 'file-text'); } catch (_) { }
     openBtn.addEventListener('click', (ev) => {
@@ -5360,13 +5357,10 @@ priority: normal
       this.app.workspace.openLinkText(file.path, '', 'split');
     });
 
-    const body = card.createDiv({ style: 'padding: 12px; min-height: 40px; position: relative;' });
+    const body = card.createDiv({ attr: { style: 'padding: 12px; min-height: 40px; position: relative;' } });
 
     // Preview container
-    const previewDiv = body.createDiv({
-      cls: 'markdown-preview-view',
-      style: 'padding: 0; min-height: 30px;'
-    });
+    const previewDiv = body.createDiv({ cls: 'markdown-preview-view', attr: { style: 'padding: 0; min-height: 30px;' } });
 
     // Render the initial markdown preview
     const renderPreview = () => {
@@ -5391,10 +5385,7 @@ priority: normal
       }
       // Add subtle placeholder if empty
       if (!rawText.trim()) {
-        const ph = previewDiv.createDiv({
-          style: 'color: var(--text-faint); font-style: italic; font-size: 0.9em; padding: 4px 0;',
-          text: placeholder || 'Empty section.'
-        });
+        const ph = previewDiv.createDiv({ text: placeholder || 'Empty section.', attr: { style: 'color: var(--text-faint); font-style: italic; font-size: 0.9em; padding: 4px 0;' } });
       }
     };
     renderPreview();
@@ -5430,7 +5421,7 @@ priority: normal
       return matchesLink(fm[linkField], parentName);
     });
 
-    const secWrap = parent.createDiv({ style: 'margin-top: 12px; margin-bottom: 12px;' });
+    const secWrap = parent.createDiv({ attr: { style: 'margin-top: 12px; margin-bottom: 12px;' } });
 
     if (filteredList.length === 0) {
       secWrap.createDiv({ cls: 'cad-empty', text: 'No linked items found.' });
@@ -5515,7 +5506,7 @@ priority: normal
                 count++;
                 const fieldDiv = metaRow.createDiv();
                 fieldDiv.style.marginBottom = '2px';
-                fieldDiv.createSpan({ text: `${f.label}: `, style: 'font-weight: 500; color: var(--text-muted);' });
+                fieldDiv.createSpan({ text: `${f.label}: `, attr: { style: 'font-weight: 500; color: var(--text-muted);' }});
 
                 const isLinkProperty = f.key === 'company' || f.key === 'contact' || f.key === 'partner' || f.key === 'owner' || f.key === 'project' || (f.suggestionSource && f.suggestionSource.startsWith('folder:'));
                 if (isLinkProperty) {
@@ -5713,16 +5704,14 @@ priority: normal
           });
 
           // View switcher: table / kanban / tile — saved back to the entity note
-          const viewSwitch = head.createDiv({ style: 'display: flex; gap: 3px; margin-left: 8px;' });
+          const viewSwitch = head.createDiv({ attr: { style: 'display: flex; gap: 3px; margin-left: 8px;' } });
           const viewOptions = [
             { v: 'table', icon: 'layout-list', title: 'Table View' },
             { v: 'kanban', icon: 'kanban', title: 'Kanban Board' },
             { v: 'tile', icon: 'layout-grid', title: 'Tile Grid' }
           ];
           viewOptions.forEach(({ v, icon, title }) => {
-            const vBtn = viewSwitch.createEl('button', {
-              style: `padding: 4px 6px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; border: 1px solid var(--border-color); background: ${v === viewType ? 'var(--interactive-accent)' : 'transparent'}; color: ${v === viewType ? 'var(--text-on-accent)' : 'var(--text-muted)'};`
-            });
+            const vBtn = viewSwitch.createEl('button', {attr: { style: `padding: 4px 6px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; border: 1px solid var(--border-color); background: ${v === viewType ? 'var(--interactive-accent)' : 'transparent'}; color: ${v === viewType ? 'var(--text-on-accent)' : 'var(--text-muted)'};` }});
             vBtn.title = title;
             try { obsidian.setIcon(vBtn, icon); } catch (_) { }
 
@@ -5741,7 +5730,7 @@ priority: normal
             }
           });
 
-          const body = card.createDiv({ style: 'padding: 12px;' });
+          const body = card.createDiv({ attr: { style: 'padding: 12px;' } });
           this._renderSingleCrossSection(body, targetEntity, linkField, viewType, parentName, filteredList);
         }
       }
@@ -5788,12 +5777,12 @@ priority: normal
           head.createDiv({ cls: 'cad-pd-card-title', text: `${cleanLabel.toUpperCase()} · ${filteredList.length} ${def.plural}` });
 
           // Chart style switcher — saved back to the entity note
-          const styleSwitch = head.createDiv({ style: 'display: flex; gap: 3px; margin-left: 8px;' });
+          const styleSwitch = head.createDiv({ attr: { style: 'display: flex; gap: 3px; margin-left: 8px;' } });
           [{ v: 'donut', icon: '🍩' }, { v: 'bar', icon: '📊' }, { v: 'kpi', icon: '🗃️' }, { v: 'list', icon: '📋' }].forEach(({ v, icon }) => {
             const sBtn = styleSwitch.createEl('button', {
               text: icon,
-              style: `padding: 1px 5px; font-size: 0.85em; border-radius: 3px; cursor: pointer; border: 1px solid var(--border-color); background: ${v === chartStyle ? 'var(--interactive-accent)' : 'transparent'}; opacity: ${v === chartStyle ? '1' : '0.55'};`
-            });
+              attr: { style: `padding: 1px 5px; font-size: 0.85em; border-radius: 3px; cursor: pointer; border: 1px solid var(--border-color); background: ${v === chartStyle ? 'var(--interactive-accent)' : 'transparent'}; opacity: ${v === chartStyle ? '1' : '0.55'};` }
+});
             sBtn.title = v;
             if (v !== chartStyle) {
               sBtn.addEventListener('click', async () => {
@@ -5810,13 +5799,8 @@ priority: normal
             }
           });
 
-          const body = card.createDiv({ cls: 'cad-dash-card-body', style: 'flex: 1; min-height: 180px; display: flex; flex-direction: column; justify-content: center; padding: 14px;' });
-          let chartHtml = '';
-          if (chartStyle === 'donut') chartHtml = this._drawDonutChart(chartData);
-          else if (chartStyle === 'bar') chartHtml = this._drawBarChart(chartData);
-          else if (chartStyle === 'kpi') chartHtml = this._drawKpiGrid(chartData);
-          else chartHtml = this._drawSimpleList(chartData);
-          body.createDiv().innerHTML = chartHtml;
+          const body = card.createDiv({ cls: 'cad-dash-card-body', attr: { style: 'flex: 1; min-height: 180px; display: flex; flex-direction: column; justify-content: center; padding: 14px;' } });
+          this._drawChart(body.createDiv(), chartStyle, chartData);
         }
       }
     } else {
@@ -5849,20 +5833,15 @@ priority: normal
         return matchesLink(fm[config.linkField], parentName);
       });
 
-      const secWrap = parent.createDiv({ style: 'margin-top: 24px; margin-bottom: 24px;' });
+      const secWrap = parent.createDiv({ attr: { style: 'margin-top: 24px; margin-bottom: 24px;' } });
 
-      const head = secWrap.createDiv({
-        style: 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;'
-      });
+      const head = secWrap.createDiv({ attr: { style: 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;' } });
       head.createEl('h3', {
         text: `${def.plural.toUpperCase()} (${config.linkField.toUpperCase()}) — ${config.viewType.toUpperCase()}`,
-        style: 'margin: 0; font-size: 1.1em; font-weight: 700; letter-spacing: 0.05em;'
-      });
+        attr: { style: 'margin: 0; font-size: 1.1em; font-weight: 700; letter-spacing: 0.05em;' }
+});
 
-      const delBtn = head.createEl('button', {
-        text: '×',
-        style: 'color: var(--text-error); border: 1px solid var(--text-error); padding: 2px 8px; font-weight: bold; border-radius: 4px; background: transparent; cursor: pointer;'
-      });
+      const delBtn = head.createEl('button', { text: '×', attr: { style: 'color: var(--text-error); border: 1px solid var(--text-error); padding: 2px 8px; font-weight: bold; border-radius: 4px; background: transparent; cursor: pointer;' } });
       delBtn.title = 'Supprimer cette section croisée';
       delBtn.addEventListener('click', async () => {
         if (!confirm('Supprimer cette section croisée ?')) return;
@@ -5880,21 +5859,13 @@ priority: normal
         const columns = def.columns || [def.fields[0].key];
         this._renderEntityTable(secWrap, config.targetEntity, filteredList, columns);
       } else if (config.viewType === 'tile') {
-        const grid = secWrap.createDiv({
-          style: 'display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 12px;'
-        });
+        const grid = secWrap.createDiv({ attr: { style: 'display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 12px;' } });
         filteredList.forEach(e => {
-          const card = grid.createDiv({
-            cls: 'cad-proj-card',
-            style: 'cursor: pointer; padding: 16px; background: var(--background-secondary); border: 1px solid var(--border-color); border-radius: 6px;'
-          });
-          const title = card.createEl('h4', {
-            text: entityValue(e, def.fields[0].key, def) || e.basename,
-            style: 'margin: 0 0 8px 0; font-weight: 600;'
-          });
+          const card = grid.createDiv({ cls: 'cad-proj-card', attr: { style: 'cursor: pointer; padding: 16px; background: var(--background-secondary); border: 1px solid var(--border-color); border-radius: 6px;' } });
+          const title = card.createEl('h4', { text: entityValue(e, def.fields[0].key, def) || e.basename, attr: { style: 'margin: 0 0 8px 0; font-weight: 600;' } });
           card.addEventListener('click', () => this.openEntityDetail(config.targetEntity, e.file));
 
-          const meta = card.createDiv({ style: 'font-size: 0.85em; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px;' });
+          const meta = card.createDiv({ attr: { style: 'font-size: 0.85em; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px;' } });
           def.fields.slice(1, 4).forEach(f => {
             const val = entityValue(e, f.key, def);
             if (val != null && val !== '') {
@@ -5903,21 +5874,13 @@ priority: normal
           });
         });
       } else if (config.viewType === 'kanban') {
-        const kanbanWrap = secWrap.createDiv({
-          style: 'display: flex; gap: 16px; overflow-x: auto; padding-bottom: 8px; margin-top: 12px;'
-        });
+        const kanbanWrap = secWrap.createDiv({ attr: { style: 'display: flex; gap: 16px; overflow-x: auto; padding-bottom: 8px; margin-top: 12px;' } });
         const groupField = def.fields.find(f => f.key === 'stage' || f.key === 'status' || f.key === 'type' || f.type === 'enum') || def.fields[1];
         const columns = groupField.options || ['To Do', 'In Progress', 'Done'];
 
         columns.forEach(colName => {
-          const col = kanbanWrap.createDiv({
-            cls: 'cad-stat-card',
-            style: 'flex: 0 0 280px; padding: 12px; display: flex; flex-direction: column; min-height: 250px; background: var(--background-secondary); border: 1px solid var(--border-color); border-radius: 6px;'
-          });
-          col.createDiv({
-            text: colName.toUpperCase(),
-            style: 'font-weight: 700; font-size: 0.8em; letter-spacing: 0.08em; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px;'
-          });
+          const col = kanbanWrap.createDiv({ cls: 'cad-stat-card', attr: { style: 'flex: 0 0 280px; padding: 12px; display: flex; flex-direction: column; min-height: 250px; background: var(--background-secondary); border: 1px solid var(--border-color); border-radius: 6px;' } });
+          col.createDiv({ text: colName.toUpperCase(), attr: { style: 'font-weight: 700; font-size: 0.8em; letter-spacing: 0.08em; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px;' } });
 
           const colItems = filteredList.filter(e => {
             const val = entityValue(e, groupField.key, def);
@@ -5926,14 +5889,11 @@ priority: normal
           });
 
           if (colItems.length === 0) {
-            col.createDiv({ text: 'Aucun élément', style: 'color: var(--text-faint); text-align: center; margin-top: 24px; font-size: 0.85em;' });
+            col.createDiv({ text: 'Aucun élément', attr: { style: 'color: var(--text-faint); text-align: center; margin-top: 24px; font-size: 0.85em;' } });
           } else {
-            const itemsList = col.createDiv({ style: 'display: flex; flex-direction: column; gap: 8px;' });
+            const itemsList = col.createDiv({ attr: { style: 'display: flex; flex-direction: column; gap: 8px;' } });
             colItems.forEach(e => {
-              const itemCard = itemsList.createDiv({
-                cls: 'cad-dash-row',
-                style: 'padding: 8px 10px; cursor: pointer; border-radius: 4px; background: var(--background-primary); border: 1px solid var(--border-color); font-weight: 500;'
-              });
+              const itemCard = itemsList.createDiv({ cls: 'cad-dash-row', attr: { style: 'padding: 8px 10px; cursor: pointer; border-radius: 4px; background: var(--background-primary); border: 1px solid var(--border-color); font-weight: 500;' } });
               itemCard.setText(entityValue(e, def.fields[0].key, def) || e.basename);
               itemCard.addEventListener('click', () => this.openEntityDetail(config.targetEntity, e.file));
             });
@@ -6783,15 +6743,15 @@ priority: normal
       });
       card.dataset.entity = 'daily';
 
-      const head = card.createDiv({ style: 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;' });
+      const head = card.createDiv({ attr: { style: 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;' } });
 
-      const infoWrap = head.createDiv({ style: 'display: flex; align-items: center; gap: 12px;' });
+      const infoWrap = head.createDiv({ attr: { style: 'display: flex; align-items: center; gap: 12px;' } });
       const iconSpan = infoWrap.createSpan({ cls: 'cad-template-tile-icon' });
       try { obsidian.setIcon(iconSpan, 'sun'); } catch (_) { iconSpan.setText('☀️'); }
 
       const titleInfo = infoWrap.createDiv();
-      titleInfo.createDiv({ text: 'PLANNER', style: 'font-weight: 700; font-size: 0.7rem; letter-spacing: 0.12em; color: var(--text-muted);' });
-      titleInfo.createEl('h3', { text: 'Daily Note', style: 'margin: 2px 0 0 0; font-size: 1.15em; font-weight: 700;' });
+      titleInfo.createDiv({ text: 'PLANNER', attr: { style: 'font-weight: 700; font-size: 0.7rem; letter-spacing: 0.12em; color: var(--text-muted);' } });
+      titleInfo.createEl('h3', { text: 'Daily Note', attr: { style: 'margin: 2px 0 0 0; font-size: 1.15em; font-weight: 700;' } });
 
       const badge = head.createSpan({
         cls: exists ? 'cad-pill cad-pill-active' : 'cad-pill cad-pill-backlog',
@@ -6802,15 +6762,12 @@ priority: normal
 
       card.createDiv({
         text: `Target Folder: ${this.plugin.settings.dailyNoteFolder || 'daily'}/`,
-        style: 'font-size: 0.8em; font-family: monospace; color: var(--text-muted); background: var(--background-secondary); padding: 4px 8px; border-radius: 4px; margin-bottom: 12px; border: 1px solid var(--background-modifier-border);'
-      });
+        attr: { style: 'font-size: 0.8em; font-family: monospace; color: var(--text-muted); background: var(--background-secondary); padding: 4px 8px; border-radius: 4px; margin-bottom: 12px; border: 1px solid var(--background-modifier-border);' }
+});
 
-      const desc = card.createDiv({
-        text: `Defines properties and sections layout for each new daily note created in the planner.`,
-        style: 'font-size: 0.85em; color: var(--text-muted); margin-bottom: 18px; flex: 1; line-height: 1.4;'
-      });
+      const desc = card.createDiv({ text: `Defines properties and sections layout for each new daily note created in the planner.`, attr: { style: 'font-size: 0.85em; color: var(--text-muted); margin-bottom: 18px; flex: 1; line-height: 1.4;' } });
 
-      const actions = card.createDiv({ style: 'display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid var(--border-color); padding-top: 14px; margin-top: auto;' });
+      const actions = card.createDiv({ attr: { style: 'display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid var(--border-color); padding-top: 14px; margin-top: auto;' } });
 
       if (exists) {
         const editBtn = actions.createEl('button', { cls: 'cad-btn primary', text: 'Visual Editor' });
@@ -6888,15 +6845,15 @@ priority: normal
       });
       card.dataset.entity = entityKey;
 
-      const head = card.createDiv({ style: 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;' });
+      const head = card.createDiv({ attr: { style: 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;' } });
 
-      const infoWrap = head.createDiv({ style: 'display: flex; align-items: center; gap: 12px;' });
+      const infoWrap = head.createDiv({ attr: { style: 'display: flex; align-items: center; gap: 12px;' } });
       const iconSpan = infoWrap.createSpan({ cls: 'cad-template-tile-icon' });
       try { obsidian.setIcon(iconSpan, def.icon || 'file-text'); } catch (_) { iconSpan.setText('📝'); }
 
       const titleInfo = infoWrap.createDiv();
-      titleInfo.createDiv({ text: def.label.toUpperCase(), style: 'font-weight: 700; font-size: 0.7rem; letter-spacing: 0.12em; color: var(--text-muted);' });
-      titleInfo.createEl('h3', { text: def.plural, style: 'margin: 2px 0 0 0; font-size: 1.15em; font-weight: 700;' });
+      titleInfo.createDiv({ text: def.label.toUpperCase(), attr: { style: 'font-weight: 700; font-size: 0.7rem; letter-spacing: 0.12em; color: var(--text-muted);' } });
+      titleInfo.createEl('h3', { text: def.plural, attr: { style: 'margin: 2px 0 0 0; font-size: 1.15em; font-weight: 700;' } });
 
       const badge = head.createSpan({
         cls: exists ? 'cad-pill cad-pill-active' : 'cad-pill cad-pill-backlog',
@@ -6907,15 +6864,15 @@ priority: normal
 
       card.createDiv({
         text: `Target Folder: ${def.folder}/`,
-        style: 'font-size: 0.8em; font-family: monospace; color: var(--text-muted); background: var(--background-secondary); padding: 4px 8px; border-radius: 4px; margin-bottom: 12px; border: 1px solid var(--background-modifier-border);'
-      });
+        attr: { style: 'font-size: 0.8em; font-family: monospace; color: var(--text-muted); background: var(--background-secondary); padding: 4px 8px; border-radius: 4px; margin-bottom: 12px; border: 1px solid var(--background-modifier-border);' }
+});
 
       const desc = card.createDiv({
         text: `Defines properties and sections layout for each new ${def.label.toLowerCase()} item created.`,
-        style: 'font-size: 0.85em; color: var(--text-muted); margin-bottom: 18px; flex: 1; line-height: 1.4;'
-      });
+        attr: { style: 'font-size: 0.85em; color: var(--text-muted); margin-bottom: 18px; flex: 1; line-height: 1.4;' }
+});
 
-      const actions = card.createDiv({ style: 'display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid var(--border-color); padding-top: 14px; margin-top: auto;' });
+      const actions = card.createDiv({ attr: { style: 'display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid var(--border-color); padding-top: 14px; margin-top: auto;' } });
 
       if (exists) {
         const editBtn = actions.createEl('button', { cls: 'cad-btn primary', text: 'Visual Editor' });
@@ -7052,12 +7009,10 @@ priority: normal
     });
 
     /* Toolbar for adding sections */
-    const toolbar = root.createDiv({
-      style: 'margin-top: 32px; margin-bottom: 48px; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px; border-top: 1px solid var(--border-color);'
-    });
-    toolbar.createDiv({ text: '➕ ADD BLOCK TO TEMPLATE', style: 'font-weight: 700; font-size: 0.75rem; letter-spacing: 0.15em; color: var(--text-muted);' });
+    const toolbar = root.createDiv({ attr: { style: 'margin-top: 32px; margin-bottom: 48px; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px; border-top: 1px solid var(--border-color);' } });
+    toolbar.createDiv({ text: '➕ ADD BLOCK TO TEMPLATE', attr: { style: 'font-weight: 700; font-size: 0.75rem; letter-spacing: 0.15em; color: var(--text-muted);' } });
 
-    const btnRow = toolbar.createDiv({ style: 'display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;' });
+    const btnRow = toolbar.createDiv({ attr: { style: 'display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;' } });
 
     const addSectionHelper = async (cleanTitle, tag, defaultBody = '') => {
       const curContent = await this.app.vault.read(file);
@@ -7145,7 +7100,7 @@ priority: normal
     const { cleanLabel, tag } = parseHeaderKey(rawKey);
 
     // Outer wrapper — draggable to support reordering
-    const wrap = parent.createDiv({ style: 'position: relative; margin-bottom: 12px; transition: transform 0.2s ease;' });
+    const wrap = parent.createDiv({ attr: { style: 'position: relative; margin-bottom: 12px; transition: transform 0.2s ease;' } });
 
     // Enable full card dragging for reordering
     wrap.draggable = true;
@@ -7223,20 +7178,15 @@ priority: normal
     if (!cardHead) return;
 
     // ── Controls row appended to the right of the card head ──
-    const ctrlRow = cardHead.createDiv({ style: 'display: flex; align-items: center; gap: 8px; margin-left: 8px; flex-shrink: 0;' });
+    const ctrlRow = cardHead.createDiv({ attr: { style: 'display: flex; align-items: center; gap: 8px; margin-left: 8px; flex-shrink: 0;' } });
 
     // --- Drag Handle ---
-    const grip = ctrlRow.createDiv({
-      style: 'cursor: grab; display: flex; align-items: center; justify-content: center; color: var(--text-muted); opacity: 0.7; padding: 2px 4px;'
-    });
+    const grip = ctrlRow.createDiv({ attr: { style: 'cursor: grab; display: flex; align-items: center; justify-content: center; color: var(--text-muted); opacity: 0.7; padding: 2px 4px;' } });
     grip.title = 'Drag card to reorder';
     try { obsidian.setIcon(grip, 'grip-vertical'); } catch (_) { }
 
     // --- Delete button ---
-    const delBtn = ctrlRow.createEl('button', {
-      text: '×',
-      style: 'color: var(--text-error); padding: 0 4px; font-weight: bold; background: transparent; border: none; font-size: 1.25em; cursor: pointer;'
-    });
+    const delBtn = ctrlRow.createEl('button', { text: '×', attr: { style: 'color: var(--text-error); padding: 0 4px; font-weight: bold; background: transparent; border: none; font-size: 1.25em; cursor: pointer;' } });
     delBtn.title = `Remove section "${cleanLabel}" from template`;
     delBtn.addEventListener('click', async (ev) => {
       ev.stopPropagation();
@@ -7688,126 +7638,152 @@ priority: normal
     });
   }
 
-  _drawDonutChart(data) {
+  /* Central chart dispatcher — replaces 4 duplicated if-elseif blocks at call sites. */
+  _drawChart(parent, style, data) {
+    if (style === 'donut') this._drawDonutChart(parent, data);
+    else if (style === 'bar') this._drawBarChart(parent, data);
+    else if (style === 'kpi') this._drawKpiGrid(parent, data);
+    else this._drawSimpleList(parent, data);
+  }
+
+  _drawChartEmpty(parent) {
+    const el = parent.createDiv({ cls: 'cad-empty', text: 'No data' });
+    el.style.cssText = 'text-align: center; padding: 16px;';
+  }
+
+  _drawDonutChart(parent, data) {
     const total = data.reduce((sum, item) => sum + item.count, 0);
-    if (total === 0) return `<div class="cad-empty" style="text-align: center; padding: 16px;">No data</div>`;
+    if (total === 0) return this._drawChartEmpty(parent);
 
     const r = 50;
     const circ = 2 * Math.PI * r;
-    let currentOffset = 0;
-
     const colors = ['#38bdf8', '#34d399', '#f43f5e', '#a855f7', '#f97316', '#06b6d4', '#eab308'];
 
-    let svgContent = '';
-    let legendContent = '<div class="cad-donut-legend" style="display: flex; flex-direction: column; gap: 6px; flex: 1;">';
+    const container = parent.createDiv({ cls: 'cad-donut-chart-container' });
+    container.style.cssText = 'display: flex; align-items: center; justify-content: center; gap: 24px; padding: 12px;';
 
+    const svgWrap = container.createDiv({ cls: 'cad-donut-svg-wrap' });
+    svgWrap.style.cssText = 'position: relative; width: 140px; height: 140px; flex-shrink: 0;';
+
+    const svg = svgWrap.createSvg('svg', { attr: { width: '140', height: '140', viewBox: '0 0 140 140' } });
+    svg.createSvg('circle', { attr: { cx: '70', cy: '70', r: String(r), fill: 'transparent', stroke: 'var(--background-secondary)', 'stroke-width': '12' } });
+
+    let currentOffset = 0;
     data.forEach((item, index) => {
       const pct = item.count / total;
       const color = colors[index % colors.length];
       const strokeLength = pct * circ;
-      const strokeOffset = -currentOffset;
-
-      svgContent += `
-        <circle cx="70" cy="70" r="${r}" 
-          fill="transparent" 
-          stroke="${color}" 
-          stroke-width="12" 
-          stroke-dasharray="${strokeLength} ${circ}" 
-          stroke-dashoffset="${strokeOffset}" 
-          transform="rotate(-90 70 70)"
-          class="cad-donut-segment"
-        />
-      `;
-
-      legendContent += `
-        <div class="cad-donut-legend-item" style="display: flex; align-items: center; gap: 8px; font-size: 0.85em;">
-          <span class="cad-donut-legend-color" style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: ${color}; flex-shrink: 0;"></span>
-          <span class="cad-donut-legend-label" style="flex: 1; color: var(--text-normal); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">${item.label}</span>
-          <span class="cad-donut-legend-count" style="font-weight: 700; color: var(--text-muted);">${item.count} (${Math.round(pct * 100)}%)</span>
-        </div>
-      `;
-
+      svg.createSvg('circle', {
+        cls: 'cad-donut-segment',
+        attr: {
+          cx: '70', cy: '70', r: String(r),
+          fill: 'transparent',
+          stroke: color,
+          'stroke-width': '12',
+          'stroke-dasharray': `${strokeLength} ${circ}`,
+          'stroke-dashoffset': String(-currentOffset),
+          transform: 'rotate(-90 70 70)',
+        },
+      });
       currentOffset += strokeLength;
     });
 
-    legendContent += '</div>';
+    const center = svgWrap.createDiv({ cls: 'cad-donut-center' });
+    center.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; justify-content: center;';
+    const centerTotal = center.createSpan({ cls: 'cad-donut-center-total', text: String(total) });
+    centerTotal.style.cssText = 'font-size: 1.25rem; font-weight: 700; color: var(--text-normal);';
+    const centerLabel = center.createSpan({ cls: 'cad-donut-center-label', text: 'Total' });
+    centerLabel.style.cssText = 'font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;';
 
-    return `
-      <div class="cad-donut-chart-container" style="display: flex; align-items: center; justify-content: center; gap: 24px; padding: 12px;">
-        <div class="cad-donut-svg-wrap" style="position: relative; width: 140px; height: 140px; flex-shrink: 0;">
-          <svg width="140" height="140" viewBox="0 0 140 140">
-            <circle cx="70" cy="70" r="${r}" fill="transparent" stroke="var(--background-secondary)" stroke-width="12" />
-            ${svgContent}
-          </svg>
-          <div class="cad-donut-center" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <span class="cad-donut-center-total" style="font-size: 1.25rem; font-weight: 700; color: var(--text-normal);">${total}</span>
-            <span class="cad-donut-center-label" style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Total</span>
-          </div>
-        </div>
-        ${legendContent}
-      </div>
-    `;
+    const legend = container.createDiv({ cls: 'cad-donut-legend' });
+    legend.style.cssText = 'display: flex; flex-direction: column; gap: 6px; flex: 1;';
+    data.forEach((item, index) => {
+      const pct = item.count / total;
+      const color = colors[index % colors.length];
+      const row = legend.createDiv({ cls: 'cad-donut-legend-item' });
+      row.style.cssText = 'display: flex; align-items: center; gap: 8px; font-size: 0.85em;';
+      const swatch = row.createSpan({ cls: 'cad-donut-legend-color' });
+      swatch.style.cssText = `display: inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: ${color}; flex-shrink: 0;`;
+      const labelEl = row.createSpan({ cls: 'cad-donut-legend-label', text: String(item.label) });
+      labelEl.style.cssText = 'flex: 1; color: var(--text-normal); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;';
+      const countEl = row.createSpan({ cls: 'cad-donut-legend-count', text: `${item.count} (${Math.round(pct * 100)}%)` });
+      countEl.style.cssText = 'font-weight: 700; color: var(--text-muted);';
+    });
   }
 
-  _drawBarChart(data) {
+  _drawBarChart(parent, data) {
     const total = data.reduce((sum, item) => sum + item.count, 0);
-    if (total === 0) return `<div class="cad-empty" style="text-align: center; padding: 16px;">No data</div>`;
+    if (total === 0) return this._drawChartEmpty(parent);
 
-    const maxCount = Math.max(1, ...data.map(item => item.count));
+    const maxCount = Math.max(1, ...data.map((item) => item.count));
     const colors = ['#38bdf8', '#34d399', '#f43f5e', '#a855f7', '#f97316', '#06b6d4', '#eab308'];
 
-    let bars = '<div class="cad-stage-bars" style="padding: 12px 0; display: flex; flex-direction: column; gap: 8px;">';
+    const bars = parent.createDiv({ cls: 'cad-stage-bars' });
+    bars.style.cssText = 'padding: 12px 0; display: flex; flex-direction: column; gap: 8px;';
+
     data.forEach((item, index) => {
       const color = colors[index % colors.length];
       const pct = (item.count / maxCount) * 100;
-      bars += `
-        <div class="cad-stage-bar-row" style="display: flex; align-items: center; margin-bottom: 0; padding: 4px 8px; border-radius: 6px;">
-          <div class="cad-stage-bar-name" style="width: 120px; font-weight: 500; font-size: 0.85em; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.label}</div>
-          <div class="cad-stage-bar-count" style="margin-right: 12px; font-weight: 700; color: var(--text-muted); font-size: 0.85em;">${item.count}</div>
-          <div class="cad-stage-bar" style="flex: 1; background: var(--background-secondary); border-radius: 4px; height: 10px; overflow: hidden; position: relative;">
-            <div class="cad-stage-bar-fill" style="width: ${pct}%; background-color: ${color}; height: 100%; border-radius: 4px; transition: width 0.3s ease;"></div>
-          </div>
-          <div class="cad-stage-bar-value" style="margin-left: 12px; font-size: 0.8em; color: var(--text-faint); font-weight: 600; min-width: 36px; text-align: right;">${Math.round((item.count / total) * 100)}%</div>
-        </div>
-      `;
+      const row = bars.createDiv({ cls: 'cad-stage-bar-row' });
+      row.style.cssText = 'display: flex; align-items: center; margin-bottom: 0; padding: 4px 8px; border-radius: 6px;';
+
+      const name = row.createDiv({ cls: 'cad-stage-bar-name', text: String(item.label) });
+      name.style.cssText = 'width: 120px; font-weight: 500; font-size: 0.85em; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+
+      const count = row.createDiv({ cls: 'cad-stage-bar-count', text: String(item.count) });
+      count.style.cssText = 'margin-right: 12px; font-weight: 700; color: var(--text-muted); font-size: 0.85em;';
+
+      const bar = row.createDiv({ cls: 'cad-stage-bar' });
+      bar.style.cssText = 'flex: 1; background: var(--background-secondary); border-radius: 4px; height: 10px; overflow: hidden; position: relative;';
+      const fill = bar.createDiv({ cls: 'cad-stage-bar-fill' });
+      fill.style.cssText = `width: ${pct}%; background-color: ${color}; height: 100%; border-radius: 4px; transition: width 0.3s ease;`;
+
+      const value = row.createDiv({ cls: 'cad-stage-bar-value', text: `${Math.round((item.count / total) * 100)}%` });
+      value.style.cssText = 'margin-left: 12px; font-size: 0.8em; color: var(--text-faint); font-weight: 600; min-width: 36px; text-align: right;';
     });
-    bars += '</div>';
-    return bars;
   }
 
-  _drawKpiGrid(data) {
-    if (data.length === 0) return `<div class="cad-empty" style="text-align: center; padding: 16px;">No data</div>`;
+  _drawKpiGrid(parent, data) {
+    if (data.length === 0) return this._drawChartEmpty(parent);
     const total = data.reduce((sum, item) => sum + item.count, 0);
     const colors = ['sky', 'emerald', 'rose', 'purple', 'warn', 'mint'];
-    let cards = '<div class="cad-stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; padding: 12px 0; margin: 0;">';
+
+    const grid = parent.createDiv({ cls: 'cad-stat-grid' });
+    grid.style.cssText = 'grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; padding: 12px 0; margin: 0;';
+
     data.forEach((item, index) => {
       const accent = colors[index % colors.length];
       const pct = total === 0 ? 0 : Math.round((item.count / total) * 100);
-      cards += `
-        <div class="cad-stat-card" data-accent="${accent}" style="padding: 10px 12px; display: flex; flex-direction: column; justify-content: center; min-height: 70px;">
-          <div class="cad-stat-label" style="font-size: 0.65rem; letter-spacing: 0.08em; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;">${item.label.toUpperCase()}</div>
-          <div class="cad-stat-value" style="font-size: 1.25rem; font-weight: 800; margin: 2px 0; line-height: 1;">${item.count}</div>
-          <div class="cad-stat-sub" style="font-size: 9px; margin-top: 0;">${pct}% of total</div>
-        </div>
-      `;
+      const card = grid.createDiv({ cls: 'cad-stat-card', attr: { 'data-accent': accent } });
+      card.style.cssText = 'padding: 10px 12px; display: flex; flex-direction: column; justify-content: center; min-height: 70px;';
+
+      const label = card.createDiv({ cls: 'cad-stat-label', text: String(item.label).toUpperCase() });
+      label.style.cssText = 'font-size: 0.65rem; letter-spacing: 0.08em; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;';
+
+      const value = card.createDiv({ cls: 'cad-stat-value', text: String(item.count) });
+      value.style.cssText = 'font-size: 1.25rem; font-weight: 800; margin: 2px 0; line-height: 1;';
+
+      const sub = card.createDiv({ cls: 'cad-stat-sub', text: `${pct}% of total` });
+      sub.style.cssText = 'font-size: 9px; margin-top: 0;';
     });
-    cards += '</div>';
-    return cards;
   }
 
-  _drawSimpleList(data) {
-    if (data.length === 0) return `<div class="cad-empty" style="text-align: center; padding: 16px;">No data</div>`;
-    let list = '<div class="cad-simple-list" style="display: flex; flex-direction: column; gap: 6px; padding: 8px 0;">';
+  _drawSimpleList(parent, data) {
+    if (data.length === 0) return this._drawChartEmpty(parent);
+
+    const list = parent.createDiv({ cls: 'cad-simple-list' });
+    list.style.cssText = 'display: flex; flex-direction: column; gap: 6px; padding: 8px 0;';
+
     data.forEach((item) => {
-      list += `
-        <div class="cad-list-item" style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: var(--background-secondary); border-radius: 6px; font-size: 0.9em;">
-          <span style="font-weight: 500; color: var(--text-normal); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;">${item.label}</span>
-          <span style="font-weight: 700; background: var(--background-primary); padding: 1px 8px; border-radius: 4px; border: 1px solid var(--border-color); color: var(--text-muted);">${item.count}</span>
-        </div>
-      `;
+      const row = list.createDiv({ cls: 'cad-list-item' });
+      row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: var(--background-secondary); border-radius: 6px; font-size: 0.9em;';
+
+      const label = row.createSpan({ text: String(item.label) });
+      label.style.cssText = 'font-weight: 500; color: var(--text-normal); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;';
+
+      const count = row.createSpan({ text: String(item.count) });
+      count.style.cssText = 'font-weight: 700; background: var(--background-primary); padding: 1px 8px; border-radius: 4px; border: 1px solid var(--border-color); color: var(--text-muted);';
     });
-    list += '</div>';
-    return list;
   }
 
   /* ── Projects Dashboard ─────────────────── */
@@ -7833,17 +7809,14 @@ priority: normal
     const statusField = def.fields.find(f => f.key === 'status') || { options: ['active', 'on_hold', 'backlog', 'done', 'cancelled'] };
     const statuses = statusField.options || ['active', 'on_hold', 'backlog', 'done', 'cancelled'];
 
-    const grid = root.createDiv({ cls: 'cad-stat-grid', style: 'padding-bottom: 24px;' });
+    const grid = root.createDiv({ cls: 'cad-stat-grid', attr: { style: 'padding-bottom: 24px;' } });
 
     // 1. Total projects card
-    const totalCard = grid.createDiv({
-      cls: 'cad-stat-card',
-      style: 'padding: 20px; display: flex; flex-direction: column; justify-content: center; min-height: 280px; margin: 0; position: relative;'
-    });
+    const totalCard = grid.createDiv({ cls: 'cad-stat-card', attr: { style: 'padding: 20px; display: flex; flex-direction: column; justify-content: center; min-height: 280px; margin: 0; position: relative;' } });
     totalCard.dataset.accent = 'sky';
-    totalCard.createDiv({ cls: 'cad-stat-label', text: 'TOTAL PROJECTS', style: 'font-weight: 700; letter-spacing: 0.12em;' });
-    totalCard.createDiv({ cls: 'cad-stat-value', text: String(allProjects.length), style: 'font-size: 3rem; font-weight: 800; margin-top: 12px; line-height: 1;' });
-    totalCard.createDiv({ cls: 'cad-stat-sub', text: 'Across all active and custom statuses', style: 'margin-top: 12px; font-size: 0.85em; color: var(--text-muted);' });
+    totalCard.createDiv({ cls: 'cad-stat-label', text: 'TOTAL PROJECTS', attr: { style: 'font-weight: 700; letter-spacing: 0.12em;' } });
+    totalCard.createDiv({ cls: 'cad-stat-value', text: String(allProjects.length), attr: { style: 'font-size: 3rem; font-weight: 800; margin-top: 12px; line-height: 1;' } });
+    totalCard.createDiv({ cls: 'cad-stat-sub', text: 'Across all active and custom statuses', attr: { style: 'margin-top: 12px; font-size: 0.85em; color: var(--text-muted);' } });
 
     // 2. Dynamic status cards
     const statusAccents = {
@@ -7860,10 +7833,7 @@ priority: normal
       const items = allProjects.filter(p => String(entityValue(p, 'status', def)).toLowerCase() === status.toLowerCase());
       const accent = statusAccents[status.toLowerCase().replace('-', '_')] || fallbackAccents[index % fallbackAccents.length];
 
-      const colCard = grid.createDiv({
-        cls: 'cad-stat-card',
-        style: 'padding: 20px; display: flex; flex-direction: column; min-height: 280px; margin: 0; position: relative;'
-      });
+      const colCard = grid.createDiv({ cls: 'cad-stat-card', attr: { style: 'padding: 20px; display: flex; flex-direction: column; min-height: 280px; margin: 0; position: relative;' } });
       colCard.dataset.accent = accent;
       colCard.dataset.stage = status; // For drag & drop target
 
@@ -7871,18 +7841,13 @@ priority: normal
       colCard.createDiv({
         cls: 'cad-stat-label',
         text: `${status.replace(/_/g, ' ').toUpperCase()} PROJECTS`,
-        style: 'font-weight: 700; letter-spacing: 0.12em;'
-      });
-      colCard.createDiv({
-        cls: 'cad-stat-value',
-        text: String(items.length),
-        style: 'font-size: 2.25rem; font-weight: 800; margin-top: 4px;'
-      });
+        attr: { style: 'font-weight: 700; letter-spacing: 0.12em;' }
+});
+      colCard.createDiv({ cls: 'cad-stat-value',
+        text: String(items.length), attr: { style: 'font-size: 2.25rem; font-weight: 800; margin-top: 4px;' } });
 
       // List area inside card
-      const list = colCard.createDiv({
-        style: 'margin-top: 16px; flex: 1; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 4px; min-height: 120px;'
-      });
+      const list = colCard.createDiv({ attr: { style: 'margin-top: 16px; flex: 1; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 4px; min-height: 120px;' } });
 
       // Drag and drop listeners on the status card itself
       colCard.addEventListener('dragover', (ev) => {
@@ -7915,18 +7880,15 @@ priority: normal
       });
 
       if (!items.length) {
-        list.createDiv({ cls: 'cad-empty', text: 'No projects', style: 'text-align: center; color: var(--text-faint); margin-top: 32px;' });
+        list.createDiv({ cls: 'cad-empty', text: 'No projects', attr: { style: 'text-align: center; color: var(--text-faint); margin-top: 32px;' } });
       } else {
         const isMobile = !!(obsidian.Platform && obsidian.Platform.isMobile);
         items.forEach((e) => {
           // Project Row inside card list
-          const row = list.createDiv({
-            cls: 'cad-dash-row',
-            style: 'display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--background-secondary); border-radius: 6px; cursor: pointer; border: 1px solid var(--border-color);'
-          });
+          const row = list.createDiv({ cls: 'cad-dash-row', attr: { style: 'display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--background-secondary); border-radius: 6px; cursor: pointer; border: 1px solid var(--border-color);' } });
 
           // Left content: Project Name
-          const nameEl = row.createDiv({ style: 'font-weight: 500; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;' });
+          const nameEl = row.createDiv({ attr: { style: 'font-weight: 500; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;' } });
           nameEl.setText(entityValue(e, 'name', def) || e.basename);
 
           // Right content: Priority Pill
@@ -7967,10 +7929,7 @@ priority: normal
     // ─── Priority Board Section ────────────────────────
     root.createDiv({ cls: 'cad-section-label-lg', text: 'PROJECTS BY PRIORITY' });
 
-    const boardWrap = root.createDiv({
-      cls: 'cad-stat-grid',
-      style: 'padding-top: 0; padding-bottom: 24px;'
-    });
+    const boardWrap = root.createDiv({ cls: 'cad-stat-grid', attr: { style: 'padding-top: 0; padding-bottom: 24px;' } });
 
     const renderBoard = () => {
       boardWrap.empty();
@@ -7989,10 +7948,7 @@ priority: normal
         const accent = priorityAccents[prio.toLowerCase()] || 'sky';
 
         // Large Priority Stat Card Stack
-        const colCard = boardWrap.createDiv({
-          cls: 'cad-stat-card',
-          style: 'padding: 20px; display: flex; flex-direction: column; min-height: 280px; margin: 0; position: relative;'
-        });
+        const colCard = boardWrap.createDiv({ cls: 'cad-stat-card', attr: { style: 'padding: 20px; display: flex; flex-direction: column; min-height: 280px; margin: 0; position: relative;' } });
         colCard.dataset.accent = accent;
         colCard.dataset.stage = prio; // For drag & drop target
 
@@ -8000,18 +7956,13 @@ priority: normal
         colCard.createDiv({
           cls: 'cad-stat-label',
           text: `${prio.toUpperCase()} PRIORITY`,
-          style: 'font-weight: 700; letter-spacing: 0.12em;'
-        });
-        colCard.createDiv({
-          cls: 'cad-stat-value',
-          text: String(items.length),
-          style: 'font-size: 2.25rem; font-weight: 800; margin-top: 4px;'
-        });
+          attr: { style: 'font-weight: 700; letter-spacing: 0.12em;' }
+});
+        colCard.createDiv({ cls: 'cad-stat-value',
+          text: String(items.length), attr: { style: 'font-size: 2.25rem; font-weight: 800; margin-top: 4px;' } });
 
         // List area inside card
-        const list = colCard.createDiv({
-          style: 'margin-top: 16px; flex: 1; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 4px; min-height: 120px;'
-        });
+        const list = colCard.createDiv({ attr: { style: 'margin-top: 16px; flex: 1; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 4px; min-height: 120px;' } });
 
         // Drag and drop listeners on the priority card itself
         colCard.addEventListener('dragover', (ev) => {
@@ -8044,18 +7995,15 @@ priority: normal
         });
 
         if (!items.length) {
-          list.createDiv({ cls: 'cad-empty', text: 'No projects', style: 'text-align: center; color: var(--text-faint); margin-top: 32px;' });
+          list.createDiv({ cls: 'cad-empty', text: 'No projects', attr: { style: 'text-align: center; color: var(--text-faint); margin-top: 32px;' } });
         } else {
           const isMobile = !!(obsidian.Platform && obsidian.Platform.isMobile);
           items.forEach((e) => {
             // Project Row inside card list
-            const row = list.createDiv({
-              cls: 'cad-dash-row',
-              style: 'display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--background-secondary); border-radius: 6px; cursor: pointer; border: 1px solid var(--border-color);'
-            });
+            const row = list.createDiv({ cls: 'cad-dash-row', attr: { style: 'display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--background-secondary); border-radius: 6px; cursor: pointer; border: 1px solid var(--border-color);' } });
 
             // Left content: Project Name
-            const nameEl = row.createDiv({ style: 'font-weight: 500; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px;' });
+            const nameEl = row.createDiv({ attr: { style: 'font-weight: 500; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px;' } });
             nameEl.setText(entityValue(e, 'name', def) || e.basename);
 
             // Right content: Status Pill
@@ -8096,42 +8044,34 @@ priority: normal
     renderBoard();
 
     // ─── Custom Widgets / Charts Section ────────────────
-    const analyticsHeader = root.createDiv({
-      style: 'display: flex; justify-content: space-between; align-items: center; padding: 24px 32px 8px 32px; margin-bottom: 16px;'
-    });
-    const labelEl = analyticsHeader.createEl('span', {
-      cls: 'cad-section-label-lg',
-      text: 'ANALYTICS & CHARTS',
-      style: 'padding: 0; margin: 0; display: inline-block;'
-    });
+    const analyticsHeader = root.createDiv({ attr: { style: 'display: flex; justify-content: space-between; align-items: center; padding: 24px 32px 8px 32px; margin-bottom: 16px;' } });
+    const labelEl = analyticsHeader.createEl('span', { cls: 'cad-section-label-lg',
+      text: 'ANALYTICS & CHARTS', attr: { style: 'padding: 0; margin: 0; display: inline-block;' } });
 
     const addWidgetBtn = analyticsHeader.createEl('button', { cls: 'cad-btn primary', text: '+ Add Custom Chart' });
 
-    const widgetsGrid = root.createDiv({
-      cls: 'cad-dash-cols',
-      style: 'display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; margin-bottom: 24px; padding: 0 32px;'
-    });
+    const widgetsGrid = root.createDiv({ cls: 'cad-dash-cols', attr: { style: 'display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; margin-bottom: 24px; padding: 0 32px;' } });
 
     const renderWidgets = () => {
       widgetsGrid.empty();
 
       const widgets = this.plugin.settings.projectDashboardWidgets || [];
       if (widgets.length === 0) {
-        const emptyWrap = widgetsGrid.createDiv({ style: 'grid-column: 1 / -1; text-align: center; padding: 32px; background: var(--background-secondary); border-radius: 8px; border: 1px dashed var(--border-color);' });
-        emptyWrap.createDiv({ text: 'No custom charts added yet. Click "+ Add Custom Chart" to create one!', style: 'color: var(--text-muted); font-size: 0.95em;' });
+        const emptyWrap = widgetsGrid.createDiv({ attr: { style: 'grid-column: 1 / -1; text-align: center; padding: 32px; background: var(--background-secondary); border-radius: 8px; border: 1px dashed var(--border-color);' } });
+        emptyWrap.createDiv({ text: 'No custom charts added yet. Click "+ Add Custom Chart" to create one!', attr: { style: 'color: var(--text-muted); font-size: 0.95em;' } });
         return;
       }
 
       widgets.forEach((w) => {
-        const card = widgetsGrid.createDiv({ cls: 'cad-dash-card', style: 'margin: 0; display: flex; flex-direction: column;' });
+        const card = widgetsGrid.createDiv({ cls: 'cad-dash-card', attr: { style: 'margin: 0; display: flex; flex-direction: column;' } });
 
         // Card Head
-        const head = card.createDiv({ cls: 'cad-dash-card-head', style: 'display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;' });
+        const head = card.createDiv({ cls: 'cad-dash-card-head', attr: { style: 'display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;' } });
         const fieldKey = w.groupBy;
 
-        head.createDiv({ cls: 'cad-dash-card-title', text: w.title.toUpperCase(), style: 'font-weight: 700; font-size: 0.75rem; letter-spacing: 0.12em;' });
+        head.createDiv({ cls: 'cad-dash-card-title', text: w.title.toUpperCase(), attr: { style: 'font-weight: 700; font-size: 0.75rem; letter-spacing: 0.12em;' } });
 
-        const actionsWrap = head.createDiv({ style: 'display: flex; gap: 8px; align-items: center;' });
+        const actionsWrap = head.createDiv({ attr: { style: 'display: flex; gap: 8px; align-items: center;' } });
 
         // Chart Style Select
         const styleSelect = actionsWrap.createEl('select', { cls: 'cad-prop-input' });
@@ -8161,11 +8101,8 @@ priority: normal
         });
 
         // Delete button
-        const delBtn = actionsWrap.createEl('button', {
-          cls: 'cad-btn',
-          text: '×',
-          style: 'color: var(--text-error); padding: 2px 8px; font-weight: bold; border-color: var(--text-error); font-size: 1.1em; height: auto; border-radius: 4px; background: transparent;'
-        });
+        const delBtn = actionsWrap.createEl('button', { cls: 'cad-btn',
+          text: '×', attr: { style: 'color: var(--text-error); padding: 2px 8px; font-weight: bold; border-color: var(--text-error); font-size: 1.1em; height: auto; border-radius: 4px; background: transparent;' } });
         delBtn.addEventListener('click', async () => {
           if (!confirm(`Delete chart "${w.title}"?`)) return;
           this.plugin.settings.projectDashboardWidgets = (this.plugin.settings.projectDashboardWidgets || []).filter(item => item.id !== w.id);
@@ -8173,7 +8110,7 @@ priority: normal
           this.render();
         });
 
-        const body = card.createDiv({ cls: 'cad-dash-card-body', style: 'flex: 1; min-height: 180px; display: flex; flex-direction: column; justify-content: center; padding: 14px;' });
+        const body = card.createDiv({ cls: 'cad-dash-card-body', attr: { style: 'flex: 1; min-height: 180px; display: flex; flex-direction: column; justify-content: center; padding: 14px;' } });
 
         // Calculate chart data for this widget
         const counts = {};
@@ -8195,19 +8132,8 @@ priority: normal
           .map(([label, count]) => ({ label, count }))
           .sort((a, b) => b.count - a.count);
 
-        // Draw chart based on style
-        let chartHtml = '';
-        if (w.style === 'donut') {
-          chartHtml = this._drawDonutChart(chartData);
-        } else if (w.style === 'bar') {
-          chartHtml = this._drawBarChart(chartData);
-        } else if (w.style === 'kpi') {
-          chartHtml = this._drawKpiGrid(chartData);
-        } else {
-          chartHtml = this._drawSimpleList(chartData);
-        }
-
-        body.createDiv().innerHTML = chartHtml;
+        // Draw chart directly into a fresh div — no innerHTML.
+        this._drawChart(body.createDiv(), w.style, chartData);
       });
     };
 
@@ -8363,42 +8289,34 @@ priority: normal
     mkMini('PARTNERS', partners.length, 'rose', 'prm.partners');
 
     // ─── Custom Widgets / Charts Section ────────────────
-    const analyticsHeader = root.createDiv({
-      style: 'display: flex; justify-content: space-between; align-items: center; padding: 24px 32px 8px 32px; margin-bottom: 16px;'
-    });
-    const labelEl = analyticsHeader.createEl('span', {
-      cls: 'cad-section-label-lg',
-      text: 'ANALYTICS & CHARTS',
-      style: 'padding: 0; margin: 0; display: inline-block;'
-    });
+    const analyticsHeader = root.createDiv({ attr: { style: 'display: flex; justify-content: space-between; align-items: center; padding: 24px 32px 8px 32px; margin-bottom: 16px;' } });
+    const labelEl = analyticsHeader.createEl('span', { cls: 'cad-section-label-lg',
+      text: 'ANALYTICS & CHARTS', attr: { style: 'padding: 0; margin: 0; display: inline-block;' } });
 
     const addWidgetBtn = analyticsHeader.createEl('button', { cls: 'cad-btn primary', text: '+ Add Custom Chart' });
 
-    const widgetsGrid = root.createDiv({
-      cls: 'cad-dash-cols',
-      style: 'display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; margin-bottom: 24px; padding: 0 32px;'
-    });
+    const widgetsGrid = root.createDiv({ cls: 'cad-dash-cols', attr: { style: 'display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; margin-bottom: 24px; padding: 0 32px;' } });
 
     const renderWidgets = () => {
       widgetsGrid.empty();
 
       const widgets = this.plugin.settings.crmDashboardWidgets || [];
       if (widgets.length === 0) {
-        const emptyWrap = widgetsGrid.createDiv({ style: 'grid-column: 1 / -1; text-align: center; padding: 32px; background: var(--background-secondary); border-radius: 8px; border: 1px dashed var(--border-color);' });
-        emptyWrap.createDiv({ text: 'No custom charts added yet. Click "+ Add Custom Chart" to create one!', style: 'color: var(--text-muted); font-size: 0.95em;' });
+        const emptyWrap = widgetsGrid.createDiv({ attr: { style: 'grid-column: 1 / -1; text-align: center; padding: 32px; background: var(--background-secondary); border-radius: 8px; border: 1px dashed var(--border-color);' } });
+        emptyWrap.createDiv({ text: 'No custom charts added yet. Click "+ Add Custom Chart" to create one!', attr: { style: 'color: var(--text-muted); font-size: 0.95em;' } });
         return;
       }
 
       widgets.forEach((w) => {
-        const card = widgetsGrid.createDiv({ cls: 'cad-dash-card', style: 'margin: 0; display: flex; flex-direction: column;' });
+        const card = widgetsGrid.createDiv({ cls: 'cad-dash-card', attr: { style: 'margin: 0; display: flex; flex-direction: column;' } });
 
         // Card Head
-        const head = card.createDiv({ cls: 'cad-dash-card-head', style: 'display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;' });
+        const head = card.createDiv({ cls: 'cad-dash-card-head', attr: { style: 'display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;' } });
         const fieldKey = w.groupBy;
 
-        head.createDiv({ cls: 'cad-dash-card-title', text: w.title.toUpperCase(), style: 'font-weight: 700; font-size: 0.75rem; letter-spacing: 0.12em;' });
+        head.createDiv({ cls: 'cad-dash-card-title', text: w.title.toUpperCase(), attr: { style: 'font-weight: 700; font-size: 0.75rem; letter-spacing: 0.12em;' } });
 
-        const actionsWrap = head.createDiv({ style: 'display: flex; gap: 8px; align-items: center;' });
+        const actionsWrap = head.createDiv({ attr: { style: 'display: flex; gap: 8px; align-items: center;' } });
 
         // Chart Style Select
         const styleSelect = actionsWrap.createEl('select', { cls: 'cad-prop-input' });
@@ -8428,11 +8346,8 @@ priority: normal
         });
 
         // Delete button
-        const delBtn = actionsWrap.createEl('button', {
-          cls: 'cad-btn',
-          text: '×',
-          style: 'color: var(--text-error); padding: 2px 8px; font-weight: bold; border-color: var(--text-error); font-size: 1.1em; height: auto; border-radius: 4px; background: transparent;'
-        });
+        const delBtn = actionsWrap.createEl('button', { cls: 'cad-btn',
+          text: '×', attr: { style: 'color: var(--text-error); padding: 2px 8px; font-weight: bold; border-color: var(--text-error); font-size: 1.1em; height: auto; border-radius: 4px; background: transparent;' } });
         delBtn.addEventListener('click', async () => {
           if (!confirm(`Delete chart "${w.title}"?`)) return;
           this.plugin.settings.crmDashboardWidgets = (this.plugin.settings.crmDashboardWidgets || []).filter(item => item.id !== w.id);
@@ -8440,7 +8355,7 @@ priority: normal
           this.render();
         });
 
-        const body = card.createDiv({ cls: 'cad-dash-card-body', style: 'flex: 1; min-height: 180px; display: flex; flex-direction: column; justify-content: center; padding: 14px;' });
+        const body = card.createDiv({ cls: 'cad-dash-card-body', attr: { style: 'flex: 1; min-height: 180px; display: flex; flex-direction: column; justify-content: center; padding: 14px;' } });
 
         // Calculate chart data for this widget
         const counts = {};
@@ -8462,19 +8377,8 @@ priority: normal
           .map(([label, count]) => ({ label, count }))
           .sort((a, b) => b.count - a.count);
 
-        // Draw chart based on style
-        let chartHtml = '';
-        if (w.style === 'donut') {
-          chartHtml = this._drawDonutChart(chartData);
-        } else if (w.style === 'bar') {
-          chartHtml = this._drawBarChart(chartData);
-        } else if (w.style === 'kpi') {
-          chartHtml = this._drawKpiGrid(chartData);
-        } else {
-          chartHtml = this._drawSimpleList(chartData);
-        }
-
-        body.createDiv().innerHTML = chartHtml;
+        // Draw chart directly into a fresh div — no innerHTML.
+        this._drawChart(body.createDiv(), w.style, chartData);
       });
     };
 
@@ -9578,42 +9482,34 @@ priority: normal
     convFill.style.width = `${conv}%`;
 
     // ─── Custom Widgets / Charts Section ────────────────
-    const analyticsHeader = root.createDiv({
-      style: 'display: flex; justify-content: space-between; align-items: center; padding: 24px 32px 8px 32px; margin-bottom: 16px;'
-    });
-    const labelEl = analyticsHeader.createEl('span', {
-      cls: 'cad-section-label-lg',
-      text: 'ANALYTICS & CHARTS',
-      style: 'padding: 0; margin: 0; display: inline-block;'
-    });
+    const analyticsHeader = root.createDiv({ attr: { style: 'display: flex; justify-content: space-between; align-items: center; padding: 24px 32px 8px 32px; margin-bottom: 16px;' } });
+    const labelEl = analyticsHeader.createEl('span', { cls: 'cad-section-label-lg',
+      text: 'ANALYTICS & CHARTS', attr: { style: 'padding: 0; margin: 0; display: inline-block;' } });
 
     const addWidgetBtn = analyticsHeader.createEl('button', { cls: 'cad-btn primary', text: '+ Add Custom Chart' });
 
-    const widgetsGrid = root.createDiv({
-      cls: 'cad-dash-cols',
-      style: 'display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; margin-bottom: 24px; padding: 0 32px;'
-    });
+    const widgetsGrid = root.createDiv({ cls: 'cad-dash-cols', attr: { style: 'display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; margin-bottom: 24px; padding: 0 32px;' } });
 
     const renderWidgets = () => {
       widgetsGrid.empty();
 
       const widgets = this.plugin.settings.prmDashboardWidgets || [];
       if (widgets.length === 0) {
-        const emptyWrap = widgetsGrid.createDiv({ style: 'grid-column: 1 / -1; text-align: center; padding: 32px; background: var(--background-secondary); border-radius: 8px; border: 1px dashed var(--border-color);' });
-        emptyWrap.createDiv({ text: 'No custom charts added yet. Click "+ Add Custom Chart" to create one!', style: 'color: var(--text-muted); font-size: 0.95em;' });
+        const emptyWrap = widgetsGrid.createDiv({ attr: { style: 'grid-column: 1 / -1; text-align: center; padding: 32px; background: var(--background-secondary); border-radius: 8px; border: 1px dashed var(--border-color);' } });
+        emptyWrap.createDiv({ text: 'No custom charts added yet. Click "+ Add Custom Chart" to create one!', attr: { style: 'color: var(--text-muted); font-size: 0.95em;' } });
         return;
       }
 
       widgets.forEach((w) => {
-        const card = widgetsGrid.createDiv({ cls: 'cad-dash-card', style: 'margin: 0; display: flex; flex-direction: column;' });
+        const card = widgetsGrid.createDiv({ cls: 'cad-dash-card', attr: { style: 'margin: 0; display: flex; flex-direction: column;' } });
 
         // Card Head
-        const head = card.createDiv({ cls: 'cad-dash-card-head', style: 'display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;' });
+        const head = card.createDiv({ cls: 'cad-dash-card-head', attr: { style: 'display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;' } });
         const fieldKey = w.groupBy;
 
-        head.createDiv({ cls: 'cad-dash-card-title', text: w.title.toUpperCase(), style: 'font-weight: 700; font-size: 0.75rem; letter-spacing: 0.12em;' });
+        head.createDiv({ cls: 'cad-dash-card-title', text: w.title.toUpperCase(), attr: { style: 'font-weight: 700; font-size: 0.75rem; letter-spacing: 0.12em;' } });
 
-        const actionsWrap = head.createDiv({ style: 'display: flex; gap: 8px; align-items: center;' });
+        const actionsWrap = head.createDiv({ attr: { style: 'display: flex; gap: 8px; align-items: center;' } });
 
         // Chart Style Select
         const styleSelect = actionsWrap.createEl('select', { cls: 'cad-prop-input' });
@@ -9643,11 +9539,8 @@ priority: normal
         });
 
         // Delete button
-        const delBtn = actionsWrap.createEl('button', {
-          cls: 'cad-btn',
-          text: '×',
-          style: 'color: var(--text-error); padding: 2px 8px; font-weight: bold; border-color: var(--text-error); font-size: 1.1em; height: auto; border-radius: 4px; background: transparent;'
-        });
+        const delBtn = actionsWrap.createEl('button', { cls: 'cad-btn',
+          text: '×', attr: { style: 'color: var(--text-error); padding: 2px 8px; font-weight: bold; border-color: var(--text-error); font-size: 1.1em; height: auto; border-radius: 4px; background: transparent;' } });
         delBtn.addEventListener('click', async () => {
           if (!confirm(`Delete chart "${w.title}"?`)) return;
           this.plugin.settings.prmDashboardWidgets = (this.plugin.settings.prmDashboardWidgets || []).filter(item => item.id !== w.id);
@@ -9655,7 +9548,7 @@ priority: normal
           this.render();
         });
 
-        const body = card.createDiv({ cls: 'cad-dash-card-body', style: 'flex: 1; min-height: 180px; display: flex; flex-direction: column; justify-content: center; padding: 14px;' });
+        const body = card.createDiv({ cls: 'cad-dash-card-body', attr: { style: 'flex: 1; min-height: 180px; display: flex; flex-direction: column; justify-content: center; padding: 14px;' } });
 
         // Calculate chart data for this widget
         const counts = {};
@@ -9677,19 +9570,8 @@ priority: normal
           .map(([label, count]) => ({ label, count }))
           .sort((a, b) => b.count - a.count);
 
-        // Draw chart based on style
-        let chartHtml = '';
-        if (w.style === 'donut') {
-          chartHtml = this._drawDonutChart(chartData);
-        } else if (w.style === 'bar') {
-          chartHtml = this._drawBarChart(chartData);
-        } else if (w.style === 'kpi') {
-          chartHtml = this._drawKpiGrid(chartData);
-        } else {
-          chartHtml = this._drawSimpleList(chartData);
-        }
-
-        body.createDiv().innerHTML = chartHtml;
+        // Draw chart directly into a fresh div — no innerHTML.
+        this._drawChart(body.createDiv(), w.style, chartData);
       });
     };
 
@@ -10601,7 +10483,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       addForm.style.marginTop = '16px';
       addForm.style.background = 'var(--background-primary-alt)';
 
-      addForm.createEl('h4', { text: '+ Add Custom Navigation Page', style: 'margin-top: 0;' });
+      addForm.createEl('h4', { text: '+ Add Custom Navigation Page', attr: { style: 'margin-top: 0;' } });
 
       const formRow = addForm.createDiv();
       formRow.style.display = 'flex';
@@ -10613,7 +10495,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       const labelWrap = formRow.createDiv();
       labelWrap.style.flex = '1';
       labelWrap.style.minWidth = '150px';
-      labelWrap.createEl('label', { text: 'Label:', style: 'display: block; font-size: 0.85em; margin-bottom: 4px; font-weight: 500;' });
+      labelWrap.createEl('label', { text: 'Label:', attr: { style: 'display: block; font-size: 0.85em; margin-bottom: 4px; font-weight: 500;' } });
       const labelInput = labelWrap.createEl('input', { type: 'text', placeholder: 'e.g. VIP Contacts' });
       labelInput.style.width = '100%';
       labelInput.style.padding = '4px 8px';
@@ -10621,7 +10503,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       // 2. Section Selector
       const sectionWrap = formRow.createDiv();
       sectionWrap.style.minWidth = '120px';
-      sectionWrap.createEl('label', { text: 'Sidebar Section:', style: 'display: block; font-size: 0.85em; margin-bottom: 4px; font-weight: 500;' });
+      sectionWrap.createEl('label', { text: 'Sidebar Section:', attr: { style: 'display: block; font-size: 0.85em; margin-bottom: 4px; font-weight: 500;' } });
       const sectionSelect = sectionWrap.createEl('select');
       sectionSelect.style.width = '100%';
       sectionSelect.createEl('option', { value: 'planner', text: 'Planner' });
@@ -10634,7 +10516,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       // 3. Default Layout Selector
       const layoutWrap = formRow.createDiv();
       layoutWrap.style.minWidth = '120px';
-      layoutWrap.createEl('label', { text: 'Default Layout:', style: 'display: block; font-size: 0.85em; margin-bottom: 4px; font-weight: 500;' });
+      layoutWrap.createEl('label', { text: 'Default Layout:', attr: { style: 'display: block; font-size: 0.85em; margin-bottom: 4px; font-weight: 500;' } });
       const layoutSelect = layoutWrap.createEl('select');
       layoutSelect.style.width = '100%';
       layoutSelect.createEl('option', { value: 'table', text: 'Table view ☰' });
@@ -10644,7 +10526,7 @@ class CadenceSettingTab extends obsidian.PluginSettingTab {
       // 3.5 Icon Selector
       const iconWrap = formRow.createDiv();
       iconWrap.style.minWidth = '120px';
-      iconWrap.createEl('label', { text: 'Icon:', style: 'display: block; font-size: 0.85em; margin-bottom: 4px; font-weight: 500;' });
+      iconWrap.createEl('label', { text: 'Icon:', attr: { style: 'display: block; font-size: 0.85em; margin-bottom: 4px; font-weight: 500;' } });
       const iconSelect = iconWrap.createEl('select');
       iconSelect.style.width = '100%';
 
