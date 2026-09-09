@@ -279,6 +279,7 @@ const DEFAULT_SETTINGS = {
   collapsedGroups: {},
   currency: 'USD',
   cadenceAppDark: false,
+  heatmapRange: '1y',
   taskProjectLinks: {},
   modules: {
     crm: true,
@@ -457,6 +458,364 @@ function pctBand(pct) {
   return 'emerald';
 }
 
+/* ─────────── Activity & Streak System Helpers ─────────── */
+
+async function computeDailyActivityMap(app, settings) {
+  const activityMap = {};
+  const ensureEntry = (dateStr) => {
+    if (!activityMap[dateStr]) {
+      activityMap[dateStr] = { tasks: 0, notes: 0, total: 0 };
+    }
+    return activityMap[dateStr];
+  };
+
+  const mdFiles = (app && app.vault && typeof app.vault.getMarkdownFiles === 'function')
+    ? app.vault.getMarkdownFiles()
+    : [];
+
+  const dailyFolder = (settings && settings.dailyNoteFolder ? settings.dailyNoteFolder : '').replace(/\/+$/, '').toLowerCase();
+
+  for (const file of mdFiles) {
+    const p = file.path.toLowerCase();
+    const isDaily = (dailyFolder && p.startsWith(dailyFolder + '/')) || /^\d{4}-\d{2}-\d{2}$/.test(file.basename);
+
+    if (isDaily) {
+      const match = file.basename.match(/\d{4}-\d{2}-\d{2}/);
+      if (match) {
+        const dateKey = match[0];
+        const entry = ensureEntry(dateKey);
+        entry.notes += 1;
+        entry.total += 1;
+
+        const cache = (app.metadataCache && typeof app.metadataCache.getFileCache === 'function')
+          ? app.metadataCache.getFileCache(file)
+          : null;
+        let tasksDone = 0;
+        if (cache && Array.isArray(cache.listItems)) {
+          cache.listItems.forEach((li) => {
+            if (li.task === 'x' || li.task === 'X') {
+              tasksDone++;
+            }
+          });
+        }
+        if (tasksDone > 0) {
+          entry.tasks += tasksDone;
+          entry.total += tasksDone;
+        }
+      }
+    } else {
+      if (file.stat && file.stat.mtime) {
+        const mDate = ymd(new Date(file.stat.mtime));
+        const entry = ensureEntry(mDate);
+        entry.notes += 1;
+        entry.total += 1;
+      }
+    }
+  }
+
+  // Reminders completed
+  const reminders = (settings && Array.isArray(settings.reminders)) ? settings.reminders : [];
+  reminders.forEach((r) => {
+    if (r && r.done && r.completedAt) {
+      const d = new Date(r.completedAt);
+      if (!isNaN(d.getTime())) {
+        const dStr = ymd(d);
+        const entry = ensureEntry(dStr);
+        entry.tasks += 1;
+        entry.total += 1;
+      }
+    }
+  });
+
+  return activityMap;
+}
+
+function computeStreakStats(activityMap, anchorDate = new Date()) {
+  const todayStr = ymd(anchorDate);
+  const yesterdayStr = ymd(addDays(anchorDate, -1));
+
+  let currentStreak = 0;
+  let checkDate = null;
+
+  if ((activityMap[todayStr]?.total || 0) > 0) {
+    checkDate = anchorDate;
+  } else if ((activityMap[yesterdayStr]?.total || 0) > 0) {
+    checkDate = addDays(anchorDate, -1);
+  }
+
+  if (checkDate) {
+    let d = new Date(checkDate);
+    while (true) {
+      const dStr = ymd(d);
+      if ((activityMap[dStr]?.total || 0) > 0) {
+        currentStreak++;
+        d = addDays(d, -1);
+      } else {
+        break;
+      }
+    }
+  }
+
+  const activeDates = Object.keys(activityMap)
+    .filter((k) => (activityMap[k]?.total || 0) > 0)
+    .sort();
+
+  let longestStreak = 0;
+  let tempStreak = 0;
+  let prevDate = null;
+  let totalTasks = 0;
+
+  for (const dateStr of activeDates) {
+    totalTasks += (activityMap[dateStr]?.tasks || 0);
+    const curr = new Date(dateStr + 'T12:00:00');
+    if (prevDate) {
+      const diffDays = Math.round((curr.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays === 1) {
+        tempStreak++;
+      } else {
+        tempStreak = 1;
+      }
+    } else {
+      tempStreak = 1;
+    }
+    if (tempStreak > longestStreak) longestStreak = tempStreak;
+    prevDate = curr;
+  }
+
+  return {
+    currentStreak,
+    longestStreak,
+    totalActiveDays: activeDates.length,
+    totalTasks,
+  };
+}
+
+function generateHeatmapGrid(anchorDate = new Date(), numWeeks = 26, weekStartsOn = 1) {
+  const currentDay = anchorDate.getDay();
+  const endDate = addDays(anchorDate, (weekStartsOn === 1 ? (7 - (currentDay || 7)) : (6 - currentDay)));
+  const totalDays = numWeeks * 7;
+  const startDate = addDays(endDate, -totalDays + 1);
+
+  const days = [];
+  let d = new Date(startDate);
+  for (let i = 0; i < totalDays; i++) {
+    days.push(new Date(d));
+    d = addDays(d, 1);
+  }
+
+  const weeks = [];
+  for (let w = 0; w < numWeeks; w++) {
+    weeks.push(days.slice(w * 7, (w + 1) * 7));
+  }
+
+  return { startDate, endDate, weeks };
+}
+
+const PROJECT_CHART_COLORS = [
+  '#10b981', // Emerald
+  '#38bdf8', // Sky Blue
+  '#a855f7', // Purple
+  '#f59e0b', // Amber
+  '#ec4899', // Pink
+  '#14b8a6', // Teal
+  '#f97316', // Orange
+  '#6366f1', // Indigo
+  '#84cc16', // Lime
+  '#06b6d4', // Cyan
+  '#e11d48', // Crimson
+  '#8b5cf6', // Violet
+];
+
+async function computeProjectTaskCompletionsByDate(app, settings, numDays = 14, anchorDate = new Date()) {
+  const dateList = [];
+  for (let i = numDays - 1; i >= 0; i--) {
+    dateList.push(ymd(addDays(anchorDate, -i)));
+  }
+  const validDates = new Set(dateList);
+
+  // 1. Discover all projects
+  const projectFiles = (typeof listEntityFiles === 'function' && app)
+    ? listEntityFiles(app, 'project')
+    : [];
+
+  const projMap = {};
+  const projNameMap = new Map();
+  const projPathMap = new Map();
+
+  projectFiles.forEach((f, idx) => {
+    const pName = f.basename;
+    projNameMap.set(pName.toLowerCase(), pName);
+    projPathMap.set(f.path, pName);
+    projPathMap.set(f.path.toLowerCase(), pName);
+
+    let customColor = null;
+    if (app.metadataCache) {
+      const cache = app.metadataCache.getFileCache(f);
+      if (cache && cache.frontmatter) {
+        customColor = cache.frontmatter.color || cache.frontmatter.chartColor || null;
+      }
+    }
+
+    projMap[pName] = {
+      name: pName,
+      color: customColor || PROJECT_CHART_COLORS[idx % PROJECT_CHART_COLORS.length],
+      countsByDate: {},
+      total: 0,
+      file: f,
+    };
+    dateList.forEach((d) => { projMap[pName].countsByDate[d] = 0; });
+  });
+
+  const getCanonicalProject = (raw) => {
+    if (!raw) return null;
+    const clean = String(raw).replace(/^\[\[|\]\]$/g, '').trim();
+    if (projMap[clean]) return clean;
+    const lower = clean.toLowerCase();
+    if (projNameMap.has(lower)) return projNameMap.get(lower);
+    if (projPathMap.has(clean)) return projPathMap.get(clean);
+    if (projPathMap.has(lower)) return projPathMap.get(lower);
+    return null;
+  };
+
+  const seenRecords = new Set();
+  const recordCompletion = (projName, dateStr, taskTitle) => {
+    if (!projName || !dateStr || !validDates.has(dateStr)) return;
+    const canon = getCanonicalProject(projName);
+    if (!canon && !projMap[projName]) {
+      const colorIdx = Object.keys(projMap).length;
+      projMap[projName] = {
+        name: projName,
+        color: PROJECT_CHART_COLORS[colorIdx % PROJECT_CHART_COLORS.length],
+        countsByDate: {},
+        total: 0,
+      };
+      dateList.forEach((d) => { projMap[projName].countsByDate[d] = 0; });
+      projNameMap.set(projName.toLowerCase(), projName);
+    }
+    const finalProj = canon || projName;
+    const cleanT = (typeof cleanTaskDisplayTitle === 'function')
+      ? cleanTaskDisplayTitle(taskTitle)
+      : (taskTitle || '').replace(/\[\[.*?\]\]/g, '').replace(/@\d{4}-\d{2}-\d{2}/g, '').trim();
+
+    const key = `${finalProj.toLowerCase()}::${dateStr}::${cleanT.toLowerCase()}`;
+    if (!seenRecords.has(key)) {
+      seenRecords.add(key);
+      projMap[finalProj].countsByDate[dateStr] = (projMap[finalProj].countsByDate[dateStr] || 0) + 1;
+      projMap[finalProj].total += 1;
+    }
+  };
+
+  // 2. Scan Daily Notes
+  const dailyFolder = (settings && settings.dailyNoteFolder ? settings.dailyNoteFolder : '').replace(/\/+$/, '').toLowerCase();
+  const mdFiles = (app && app.vault && typeof app.vault.getMarkdownFiles === 'function')
+    ? app.vault.getMarkdownFiles()
+    : [];
+
+  for (const file of mdFiles) {
+    const p = file.path.toLowerCase();
+    const isDaily = (dailyFolder && p.startsWith(dailyFolder + '/')) || /^\d{4}-\d{2}-\d{2}$/.test(file.basename);
+    if (isDaily) {
+      const match = file.basename.match(/\d{4}-\d{2}-\d{2}/);
+      if (match && validDates.has(match[0])) {
+        const dateStr = match[0];
+        let content = '';
+        try { content = await app.vault.read(file); } catch (_) { continue; }
+        const lines = content.split('\n');
+        for (const line of lines) {
+          if (/^\s*-\s*\[[xX]\]/.test(line)) {
+            const taskText = line.replace(/^\s*-\s*\[[xX]\]\s*/, '').trim();
+            const inlineProjects = (typeof extractProjectLinks === 'function')
+              ? extractProjectLinks(taskText)
+              : [];
+
+            const dvMatch = taskText.match(/\[project::\s*(?:\[\[)?(.*?)(?:\]\])?\]/i);
+            if (dvMatch && dvMatch[1]) {
+              inlineProjects.push(dvMatch[1].trim());
+            }
+
+            if (settings && settings.taskProjectLinks) {
+              const linkKey = `${file.path}::${taskText}`;
+              const linkedPath = settings.taskProjectLinks[linkKey];
+              if (linkedPath) {
+                const pCanon = getCanonicalProject(linkedPath);
+                if (pCanon) inlineProjects.push(pCanon);
+              }
+            }
+
+            if (inlineProjects.length > 0) {
+              for (const pr of inlineProjects) {
+                recordCompletion(pr, dateStr, taskText);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 3. Scan Project files for completed tasks
+  for (const pFile of projectFiles) {
+    const projectName = pFile.basename;
+    let content = '';
+    try { content = await app.vault.read(pFile); } catch (_) { continue; }
+    const sections = (typeof parseH2Sections === 'function') ? parseH2Sections(content) : {};
+
+    let taskList = [];
+    for (const [k, v] of Object.entries(sections)) {
+      const { cleanLabel, tag } = parseHeaderKey(k);
+      if (tag === '#tasks' || cleanLabel.toLowerCase() === 'tasks') {
+        taskList = taskList.concat(typeof parseTasksList === 'function' ? parseTasksList(v) : []);
+      }
+    }
+
+    // Support TaskNotes if enabled
+    if (settings && settings.taskManagementSystem === 'tasknotes' && typeof listTaskNotesTasksForFile === 'function') {
+      const tnTasks = listTaskNotesTasksForFile(app, pFile);
+      for (const tn of tnTasks) {
+        if (tn.done) {
+          const tDate = tn.completed || tn.scheduled || tn.due;
+          if (tDate && validDates.has(tDate)) {
+            recordCompletion(projectName, tDate, tn.title);
+          }
+        }
+      }
+    }
+
+    for (const t of taskList) {
+      // STRICT: Must be completed (- [x] / - [X]). Never count incomplete (- [ ]) tasks!
+      if (!t.done) continue;
+
+      const compMatch = t.title.match(/(?:\[completion::\s*|✅\s*)(\d{4}-\d{2}-\d{2})/i);
+      const taskDate = compMatch
+        ? compMatch[1]
+        : ((typeof parseTaskDate === 'function') ? parseTaskDate(t.title) : null);
+
+      if (taskDate && validDates.has(taskDate)) {
+        recordCompletion(projectName, taskDate, t.title);
+      }
+    }
+  }
+
+  const projectList = Object.values(projMap)
+    .sort((a, b) => b.total - a.total);
+
+  let maxCount = 0;
+  let totalTasksCompleted = 0;
+  projectList.forEach((p) => {
+    totalTasksCompleted += p.total;
+    dateList.forEach((d) => {
+      const c = p.countsByDate[d] || 0;
+      if (c > maxCount) maxCount = c;
+    });
+  });
+
+  return {
+    dates: dateList,
+    projects: projectList,
+    maxCount,
+    totalTasksCompleted,
+  };
+}
 
 /* ─────────── TaskNotes Integration Helpers ─────────── */
 function listTaskNotesTasks(app) {
@@ -973,6 +1332,257 @@ function stringifyTasks(items) {
   return items.map((t) => `${t.done ? '- [x] ' : '- [ ] '}${t.title || ''}`).join('\n');
 }
 
+/* ─────────── Task Date & Sync Helpers ─────────── */
+
+function parseTaskDate(title) {
+  if (!title) return null;
+  const str = String(title);
+  const mEmoji = str.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
+  if (mEmoji) return mEmoji[1];
+  const mAt = str.match(/@(\d{4}-\d{2}-\d{2})/);
+  if (mAt) return mAt[1];
+  const mDue = str.match(/\[?(?:due|scheduled|by|on)::?\s*(\d{4}-\d{2}-\d{2})\]?/i);
+  if (mDue) return mDue[1];
+  const mIso = str.match(/(?:^|\s)(\d{4}-\d{2}-\d{2})(?:$|\s)/);
+  if (mIso) return mIso[1].trim();
+  return null;
+}
+
+function stripTaskDate(title) {
+  if (!title) return '';
+  let str = String(title);
+  str = str.replace(/(?:\[completion::\s*|✅\s*)\d{4}-\d{2}-\d{2}\]?/gi, '');
+  str = str.replace(/📅\s*\d{4}-\d{2}-\d{2}/g, '');
+  str = str.replace(/@\d{4}-\d{2}-\d{2}/g, '');
+  str = str.replace(/\[?(?:due|scheduled|by|on)::?\s*\d{4}-\d{2}-\d{2}\]?/gi, '');
+  str = str.replace(/(?:^|\s)\d{4}-\d{2}-\d{2}(?:$|\s)/g, ' ');
+  return str.replace(/\s{2,}/g, ' ').replace(/^[\s—–-]+|[\s—–-]+$/g, '').trim();
+}
+
+function setTaskDateInTitle(title, dateStr) {
+  const clean = stripTaskDate(title);
+  if (!dateStr) return clean;
+  return clean ? `${clean} 📅 ${dateStr}` : `📅 ${dateStr}`;
+}
+
+function extractProjectLinks(title) {
+  if (!title) return [];
+  const regex = /\[\[(.*?)\]\]/g;
+  const links = [];
+  let match;
+  while ((match = regex.exec(String(title))) !== null) {
+    let target = match[1].trim();
+    if (target.includes('|')) target = target.split('|')[0].trim();
+    if (target) links.push(target);
+  }
+  return links;
+}
+
+function stripProjectLinks(title) {
+  if (!title) return '';
+  return String(title).replace(/\[\[(.*?)\]\]/g, '').replace(/\s{2,}/g, ' ').trim();
+}
+
+/* ─────────── Task Milestone Helpers ─────────── */
+
+function parseTaskMilestone(title) {
+  if (!title) return null;
+  const str = String(title);
+  const mField = str.match(/\[milestone::?\s*([^\]]+)\]/i);
+  if (mField) return mField[1].trim();
+  const mWiki = str.match(/🎯\s*\[\[([^\]]+)\]\]/);
+  if (mWiki) return mWiki[1].trim();
+  return null;
+}
+
+function stripTaskMilestone(title) {
+  if (!title) return '';
+  let str = String(title);
+  str = str.replace(/\[milestone::?\s*[^\]]+\]/gi, '');
+  str = str.replace(/🎯\s*\[\[[^\]]+\]\]/g, '');
+  return str.replace(/\s{2,}/g, ' ').trim();
+}
+
+function setTaskMilestone(title, milestoneName) {
+  const clean = stripTaskMilestone(title);
+  if (!milestoneName || !milestoneName.trim()) return clean;
+  return clean ? `${clean} [milestone:: ${milestoneName.trim()}]` : `[milestone:: ${milestoneName.trim()}]`;
+}
+
+function cleanTaskDisplayTitle(rawTitle) {
+  if (!rawTitle) return '';
+  return stripTaskMilestone(stripTaskDate(stripProjectLinks(rawTitle))).replace(/\s{2,}/g, ' ').trim();
+}
+
+function syncMilestonesWithTasks(content, tasks) {
+  if (!content) return { changed: false, content };
+  const sections = parseH2Sections(content);
+  let milestoneKey = null;
+  for (const key of Object.keys(sections)) {
+    const { cleanLabel, tag } = parseHeaderKey(key);
+    if (tag === '#milestones' || cleanLabel.toLowerCase() === 'milestones') {
+      milestoneKey = key;
+      break;
+    }
+  }
+  if (!milestoneKey) return { changed: false, content };
+
+  const milestones = parseMilestones(sections[milestoneKey] || '');
+  if (!milestones.length) return { changed: false, content };
+
+  const milestoneTasksMap = new Map();
+  (tasks || []).forEach(t => {
+    const ms = parseTaskMilestone(t.title);
+    if (ms) {
+      const k = ms.trim().toLowerCase();
+      if (!milestoneTasksMap.has(k)) milestoneTasksMap.set(k, []);
+      milestoneTasksMap.get(k).push(t);
+    }
+  });
+
+  let changed = false;
+  milestones.forEach(m => {
+    const mTitle = (m.title || '').trim().toLowerCase();
+    const linkedTasks = milestoneTasksMap.get(mTitle);
+    if (linkedTasks && linkedTasks.length > 0) {
+      const allDone = linkedTasks.every(t => !!t.done);
+      if (m.done !== allDone) {
+        m.done = allDone;
+        changed = true;
+      }
+    }
+  });
+
+  if (!changed) return { changed: false, content, milestones };
+
+  const newMilestoneBody = stringifyMilestones(milestones);
+  const newContent = replaceSection(content, `## ${milestoneKey}`, newMilestoneBody || '');
+  return { changed: true, content: newContent, milestones };
+}
+
+async function removeTaskFromDailyNote(app, settings, dateStr, cleanTitle, projectName) {
+  if (!dateStr || !cleanTitle) return;
+  const dateObj = new Date(dateStr + 'T12:00:00');
+  if (isNaN(dateObj.getTime())) return;
+  const path = dailyNotePath(settings, dateObj);
+  const file = app.vault.getAbstractFileByPath(path);
+  if (!file || !(file instanceof obsidian.TFile)) return;
+
+  let content = '';
+  try { content = await app.vault.read(file); } catch (_) { return; }
+  const parsed = parseSections(content, settings);
+  const cleanTarget = cleanTaskDisplayTitle(cleanTitle).toLowerCase();
+
+  const filtered = parsed.tasks.filter((line) => {
+    const lineText = line.replace(/^\s*-\s\[(x|X| )\]\s/, '').trim();
+    const cleanLine = cleanTaskDisplayTitle(lineText).toLowerCase();
+    if (cleanLine === cleanTarget) {
+      if (projectName) {
+        const links = extractProjectLinks(lineText);
+        if (links.length > 0 && !links.some((l) => l.toLowerCase() === projectName.toLowerCase())) {
+          return true;
+        }
+      }
+      return false;
+    }
+    return true;
+  });
+
+  if (filtered.length !== parsed.tasks.length) {
+    const next = replaceSection(content, settings.tasksHeading, filtered.join('\n'));
+    await app.vault.modify(file, next);
+  }
+}
+
+async function syncProjectTaskToDailyNote(app, settings, projectFile, task, oldTask, overrideNewDate, overrideOldDate) {
+  const projectName = (projectFile && projectFile.basename) ? projectFile.basename : '';
+
+  const oldTitle = oldTask ? (oldTask.title || '') : '';
+  const newTitle = task ? (task.title || '') : '';
+  const oldDate = overrideOldDate !== undefined ? overrideOldDate : parseTaskDate(oldTitle);
+  const newDate = overrideNewDate !== undefined ? overrideNewDate : parseTaskDate(newTitle);
+  const cleanTitle = cleanTaskDisplayTitle(newTitle);
+  const oldCleanTitle = cleanTaskDisplayTitle(oldTitle);
+
+  // 1. If date changed or clean title changed or date removed, clean up old daily note
+  if (oldDate && (oldDate !== newDate || oldCleanTitle !== cleanTitle || !newDate)) {
+    await removeTaskFromDailyNote(app, settings, oldDate, oldCleanTitle || cleanTitle, projectName);
+  }
+
+  // 2. If new date is present, add or update in that date's daily note
+  if (newDate && cleanTitle) {
+    const dateObj = new Date(newDate + 'T12:00:00');
+    if (!isNaN(dateObj.getTime())) {
+      const dailyFile = await ensureDailyNote(app, settings, dateObj);
+      if (dailyFile && dailyFile instanceof obsidian.TFile) {
+        let content = '';
+        try { content = await app.vault.read(dailyFile); } catch (_) { return; }
+        const parsed = parseSections(content, settings);
+
+        const cleanTarget = cleanTitle.toLowerCase();
+        let found = false;
+        const taskLineText = projectName
+          ? `${task.done ? '- [x] ' : '- [ ] '}${cleanTitle} [[${projectName}]]`
+          : `${task.done ? '- [x] ' : '- [ ] '}${cleanTitle}`;
+
+        const updatedTasks = parsed.tasks.map((line) => {
+          const lineText = line.replace(/^\s*-\s\[(x|X| )\]\s/, '').trim();
+          const cleanLine = cleanTaskDisplayTitle(lineText).toLowerCase();
+          if (cleanLine === cleanTarget) {
+            found = true;
+            return taskLineText;
+          }
+          return line;
+        });
+
+        if (!found) {
+          updatedTasks.push(taskLineText);
+        }
+
+        const next = replaceSection(content, settings.tasksHeading, updatedTasks.join('\n'));
+        await app.vault.modify(dailyFile, next);
+      }
+    }
+  }
+}
+
+async function syncDailyNoteTaskToProject(app, settings, projectFile, taskLine, dateStr) {
+  if (!projectFile || !(projectFile instanceof obsidian.TFile)) return;
+  let content = '';
+  try { content = await app.vault.read(projectFile); } catch (_) { return; }
+  const sections = parseH2Sections(content);
+  const tasks = parseTasksList(sections['Tasks'] || '');
+  const cleanDailyTitle = cleanTaskDisplayTitle(taskLine.replace(/^\s*-\s\[(x|X| )\]\s/, ''));
+  if (!cleanDailyTitle) return;
+  const isDone = /^\s*-\s\[(x|X)\]\s/.test(taskLine);
+
+  const existingIdx = tasks.findIndex((t) => {
+    const cleanProjTitle = cleanTaskDisplayTitle(t.title).toLowerCase();
+    return cleanProjTitle === cleanDailyTitle.toLowerCase();
+  });
+
+  let formattedTitle = setTaskDateInTitle(cleanDailyTitle, dateStr);
+
+  if (existingIdx >= 0) {
+    const existingMilestone = parseTaskMilestone(tasks[existingIdx].title);
+    if (existingMilestone) {
+      formattedTitle = setTaskMilestone(formattedTitle, existingMilestone);
+    }
+    tasks[existingIdx].title = formattedTitle;
+    tasks[existingIdx].done = isDone;
+  } else {
+    tasks.push({ done: isDone, title: formattedTitle });
+  }
+
+  const newSection = stringifyTasks(tasks);
+  let next = replaceSection(content, '## Tasks', newSection);
+  const syncResult = syncMilestonesWithTasks(next, tasks);
+  if (syncResult.changed) {
+    next = syncResult.content;
+  }
+  await app.vault.modify(projectFile, next);
+}
+
 async function readProjectMeta(app, file) {
   const content = await app.vault.read(file);
   const sections = parseH2Sections(content);
@@ -987,16 +1597,65 @@ async function readProjectMeta(app, file) {
     }
   }
 
+  // Find tasks dynamically from markdown sections or TaskNotes
+  let tasks = [];
+  const plugin = (app && app.plugins && typeof app.plugins.getPlugin === 'function')
+    ? app.plugins.getPlugin('cadence-planner')
+    : (app && app.plugins && app.plugins.plugins ? app.plugins.plugins['cadence-planner'] : null);
+  if (plugin && plugin.settings && plugin.settings.taskManagementSystem === 'tasknotes' && typeof listTaskNotesTasksForFile === 'function') {
+    tasks = listTaskNotesTasksForFile(app, file).map((t) => ({ done: t.done, title: t.title }));
+  } else {
+    for (const [key, val] of Object.entries(sections)) {
+      const { cleanLabel, tag } = parseHeaderKey(key);
+      if (tag === '#tasks' || cleanLabel.toLowerCase() === 'tasks') {
+        tasks = tasks.concat(parseTasksList(val));
+      }
+    }
+  }
+
   const milestones = parseMilestones(milestoneText);
   const total = milestones.length;
-  const done = milestones.filter((m) => m.done).length;
-  const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+
+  const milestoneTasksMap = new Map();
+  (tasks || []).forEach((t) => {
+    const ms = parseTaskMilestone(t.title);
+    if (ms) {
+      const k = ms.trim().toLowerCase();
+      if (!milestoneTasksMap.has(k)) milestoneTasksMap.set(k, []);
+      milestoneTasksMap.get(k).push(t);
+    }
+  });
+
+  let done = 0;
+  let sumFractions = 0;
+
+  milestones.forEach((m) => {
+    const mTitle = (m.title || '').trim().toLowerCase();
+    const linkedTasks = milestoneTasksMap.get(mTitle);
+    if (linkedTasks && linkedTasks.length > 0) {
+      const doneCount = linkedTasks.filter((t) => !!t.done).length;
+      const allDone = doneCount === linkedTasks.length;
+      if (m.done || allDone) {
+        sumFractions += 1.0;
+        done += 1;
+      } else {
+        sumFractions += (doneCount / linkedTasks.length);
+      }
+    } else {
+      if (m.done) {
+        sumFractions += 1.0;
+        done += 1;
+      }
+    }
+  });
+
+  const percent = total === 0 ? 0 : Math.min(100, Math.max(0, Math.round((sumFractions / total) * 100)));
   const today = startOfDay(new Date());
   const upcoming = milestones
     .filter((m) => !m.done && m.date)
     .sort((a, b) => a.date - b.date);
   const next = upcoming[0] || null;
-  return { content, sections, milestones, total, done, percent, next, today };
+  return { content, sections, milestones, tasks, total, done, percent, next, today };
 }
 
 async function createEntity(app, entityKeyOrFolder, rawName) {
@@ -1186,8 +1845,13 @@ function projectNameFromPath(app, path) {
 /* Find an existing reminder linked to a specific (project, task-text) pair. */
 function findProjectTaskReminder(plugin, projectPath, taskText) {
   if (!projectPath || !taskText) return null;
-  const all = plugin.settings.reminders || [];
-  return all.find((r) => !r.done && r.project === projectPath && r.text === taskText) || null;
+  const all = (plugin && plugin.settings && plugin.settings.reminders) || [];
+  const cleanT = stripTaskDate(stripProjectLinks(taskText)).trim().toLowerCase();
+  return all.find((r) => {
+    if (r.done || r.project !== projectPath) return false;
+    const rClean = stripTaskDate(stripProjectLinks(r.text || '')).trim().toLowerCase();
+    return rClean === cleanT || (r.text || '').trim() === taskText.trim();
+  }) || null;
 }
 
 function reminderTimeStr(when) {
@@ -2694,17 +3358,36 @@ class CadenceAppView extends obsidian.ItemView {
   _taskLinkKey(dailyPath, text) { return `${dailyPath}::${(text || '').trim()}`; }
 
   _getTaskProjectLink(dailyPath, text) {
+    if (!text) return null;
+    const inlineLinks = extractProjectLinks(text);
+    if (inlineLinks.length > 0) {
+      const projectFiles = listEntityFiles(this.app, 'project');
+      for (const pName of inlineLinks) {
+        const pFile = projectFiles.find((f) => f.basename.toLowerCase() === pName.toLowerCase());
+        if (pFile) return pFile.path;
+      }
+    }
     const map = (this.plugin.settings && this.plugin.settings.taskProjectLinks) || {};
-    return map[this._taskLinkKey(dailyPath, text)] || null;
+    const clean = stripTaskDate(stripProjectLinks(text));
+    return map[this._taskLinkKey(dailyPath, text)] || map[this._taskLinkKey(dailyPath, clean)] || null;
   }
 
   async _setTaskProjectLink(dailyPath, text, projectPath) {
     if (!this.plugin.settings.taskProjectLinks) this.plugin.settings.taskProjectLinks = {};
     const key = this._taskLinkKey(dailyPath, text);
+    const cleanKey = this._taskLinkKey(dailyPath, stripTaskDate(stripProjectLinks(text)));
     if (projectPath) {
       this.plugin.settings.taskProjectLinks[key] = projectPath;
+      this.plugin.settings.taskProjectLinks[cleanKey] = projectPath;
+      const projectFile = this.app.vault.getAbstractFileByPath(projectPath);
+      if (projectFile && projectFile instanceof obsidian.TFile) {
+        const m = dailyPath.match(/(\d{4}-\d{2}-\d{2})/);
+        const dateStr = m ? m[1] : ymd(new Date());
+        await syncDailyNoteTaskToProject(this.app, this.plugin.settings, projectFile, text, dateStr);
+      }
     } else {
       delete this.plugin.settings.taskProjectLinks[key];
+      delete this.plugin.settings.taskProjectLinks[cleanKey];
     }
     await this.plugin.saveSettings();
     this.render();
@@ -2783,6 +3466,13 @@ class CadenceAppView extends obsidian.ItemView {
     this.containerEl.children[1].empty();
     await this.render();
 
+    const isEditing = () => {
+      const active = document.activeElement;
+      return !!(active && this.containerEl && this.containerEl.contains(active) && (
+        active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable
+      ));
+    };
+
     // Listen to live editor changes to dynamically update Cadence views as you type
     this.registerEvent(this.app.workspace.on('editor-change', (editor, info) => {
       const file = info.file;
@@ -2796,33 +3486,44 @@ class CadenceAppView extends obsidian.ItemView {
       }
 
       if (shouldRender) {
+        if (isEditing()) return;
         if (this._liveRenderTimer) clearTimeout(this._liveRenderTimer);
         this._liveRenderTimer = setTimeout(() => {
-          this.render();
+          if (!isEditing()) this.render();
         }, 300);
       }
     }));
 
     this.registerEvent(this.app.vault.on('modify', (file) => {
       if (this.detailFile && file && file.path === this.detailFile.path) {
-        // Skip refresh only if active focus is inside our view leaf to prevent stealing input focus
-        if (this.app.workspace.getActiveLeaf() === this.leaf) return;
+        // Skip refresh if user is currently editing or leaf has focus
+        if (isEditing() || this.app.workspace.getActiveLeaf() === this.leaf) return;
         return this.render();
       }
       if (this.mode === 'planner.today' && this.todayFile && file.path === this.todayFile.path) {
+        if (isEditing()) return;
         return this.render();
       }
       if (this.mode === 'planner.calendar') {
         const days = weekDates(this.plannerAnchor, this.plugin.settings.weekStartsOn);
         const paths = days.map((d) => dailyNotePath(this.plugin.settings, d));
-        if (paths.includes(file.path)) return this.render();
+        if (paths.includes(file.path)) {
+          if (isEditing()) return;
+          return this.render();
+        }
       }
-      if (this._modeUsesEntityFolder(file.path)) return this.render();
+      if (this._modeUsesEntityFolder(file.path)) {
+        if (isEditing()) return;
+        return this.render();
+      }
     }));
 
     const entityRefresh = (file) => {
       if (this.detailFile && file && file.path === this.detailFile.path) return;
-      if (this._modeUsesEntityFolder(file && file.path)) this.render();
+      if (this._modeUsesEntityFolder(file && file.path)) {
+        if (isEditing()) return;
+        this.render();
+      }
     };
     this.registerEvent(this.app.vault.on('create', entityRefresh));
     this.registerEvent(this.app.vault.on('delete', (file) => {
@@ -2834,19 +3535,26 @@ class CadenceAppView extends obsidian.ItemView {
     }));
     this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
       if (this.detailFile && file && file.path === this.detailFile.path) return;
-      if (this._modeUsesEntityFolder(file && file.path) || this._modeUsesEntityFolder(oldPath)) this.render();
+      if (this._modeUsesEntityFolder(file && file.path) || this._modeUsesEntityFolder(oldPath)) {
+        if (isEditing()) return;
+        this.render();
+      }
     }));
     this.registerEvent(this.app.metadataCache.on('changed', (file) => {
       if (this.detailFile && file && file.path === this.detailFile.path) {
-        if (this.app.workspace.getActiveLeaf() === this.leaf) return;
+        if (isEditing() || this.app.workspace.getActiveLeaf() === this.leaf) return;
         return this.render();
       }
-      if (this._modeUsesEntityFolder(file && file.path)) this.render();
+      if (this._modeUsesEntityFolder(file && file.path)) {
+        if (isEditing()) return;
+        this.render();
+      }
     }));
 
     // Auto-refresh when user clicks back onto the Cadence pane
     this.registerEvent(this.app.workspace.on('active-leaf-change', (leaf) => {
       if (leaf === this.leaf) {
+        if (isEditing()) return;
         this.render();
       }
     }));
@@ -5040,7 +5748,7 @@ class CadenceAppView extends obsidian.ItemView {
     });
 
     leftKeys.forEach((key) => {
-      this._renderDynamicH2Section(left, file, meta.sections, key, flashSaved);
+      this._renderDynamicH2Section(left, file, meta.sections, key, flashSaved, meta.milestones);
     });
 
     const standardMetadata = {
@@ -5057,7 +5765,7 @@ class CadenceAppView extends obsidian.ItemView {
       if (metaInfo) {
         this._renderProjectTextSection(right, file, meta.sections, { key, label: metaInfo.label, rows: metaInfo.rows, placeholder: metaInfo.placeholder }, flashSaved);
       } else {
-        this._renderDynamicH2Section(right, file, meta.sections, key, flashSaved);
+        this._renderDynamicH2Section(right, file, meta.sections, key, flashSaved, meta.milestones);
       }
     });
 
@@ -5066,7 +5774,7 @@ class CadenceAppView extends obsidian.ItemView {
     this._renderCrossSections(crossSectionContainer, 'project', titleVal);
   }
 
-  _renderMilestoneSection(parent, file, milestones, flashSaved, rawKey = 'Milestones') {
+  _renderMilestoneSection(parent, file, milestones, flashSaved, rawKey = 'Milestones', projectSections = null) {
     const card = parent.createDiv({ cls: 'cad-pd-card' });
     const head = card.createDiv({ cls: 'cad-pd-card-head' });
     const { cleanLabel } = parseHeaderKey(rawKey);
@@ -5087,7 +5795,38 @@ class CadenceAppView extends obsidian.ItemView {
         cb.checked = !!m.done;
         cb.addEventListener('change', async () => {
           items[idx].done = cb.checked;
-          await this._commitMilestones(file, items, flashSaved, false, rawKey);
+          await this._commitMilestones(file, items, flashSaved, true, rawKey);
+
+          // If milestone is toggled, also sync all tasks associated with this milestone
+          const mTitle = (items[idx].title || '').trim().toLowerCase();
+          if (mTitle) {
+            const content = await this.app.vault.read(file);
+            const sections = parseH2Sections(content);
+            let tasksKey = null;
+            for (const k of Object.keys(sections)) {
+              const { cleanLabel, tag } = parseHeaderKey(k);
+              if (tag === '#tasks' || cleanLabel.toLowerCase() === 'tasks') {
+                tasksKey = k;
+                break;
+              }
+            }
+            if (tasksKey) {
+              const taskList = parseTasksList(sections[tasksKey] || '');
+              let taskChanged = false;
+              taskList.forEach(t => {
+                const tMs = (parseTaskMilestone(t.title) || '').trim().toLowerCase();
+                if (tMs === mTitle && !!t.done !== !!cb.checked) {
+                  t.done = cb.checked;
+                  taskChanged = true;
+                }
+              });
+              if (taskChanged) {
+                await this._commitTasks(file, taskList, flashSaved, false, tasksKey);
+                return;
+              }
+            }
+          }
+          this.render();
         });
         const dateInp = row.createEl('input', { type: 'date', cls: 'cad-pd-mile-date' });
         if (m.date instanceof Date && !isNaN(m.date.getTime())) {
@@ -5101,16 +5840,53 @@ class CadenceAppView extends obsidian.ItemView {
             await this._commitMilestones(file, items, flashSaved, true, rawKey);
           }, 350);
         });
+        dateInp.addEventListener('keydown', (ev) => ev.stopPropagation());
+
         const titleInp = row.createEl('input', { type: 'text', cls: 'cad-pd-mile-title' });
         titleInp.value = m.title || '';
         titleInp.placeholder = 'Milestone title';
+
+        // Check if any tasks in this project are linked to this milestone
+        if (projectSections) {
+          let allTasks = [];
+          for (const [k, v] of Object.entries(projectSections)) {
+            const { cleanLabel, tag } = parseHeaderKey(k);
+            if (tag === '#tasks' || cleanLabel.toLowerCase() === 'tasks') {
+              allTasks = parseTasksList(v);
+              break;
+            }
+          }
+          const mName = (m.title || '').trim().toLowerCase();
+          const linked = allTasks.filter(t => (parseTaskMilestone(t.title) || '').trim().toLowerCase() === mName);
+          if (linked.length > 0) {
+            const doneCount = linked.filter(t => !!t.done).length;
+            const badge = row.createSpan({ cls: 'cad-mile-task-badge' + (doneCount === linked.length ? ' all-done' : '') });
+            badge.setText(`${doneCount}/${linked.length} tasks`);
+            badge.title = `${doneCount} of ${linked.length} tasks completed for this milestone`;
+          }
+        }
+
+        const commitMileTitle = async () => {
+          clearTimeout(tt);
+          if (items[idx] && items[idx].title !== titleInp.value) {
+            items[idx].title = titleInp.value;
+            await this._commitMilestones(file, items, flashSaved, true, rawKey);
+          }
+        };
+
         let tt;
         titleInp.addEventListener('input', () => {
           clearTimeout(tt);
-          tt = setTimeout(async () => {
-            items[idx].title = titleInp.value;
-            await this._commitMilestones(file, items, flashSaved, true, rawKey);
-          }, 400);
+          tt = setTimeout(commitMileTitle, 400);
+        });
+        titleInp.addEventListener('blur', commitMileTitle);
+        titleInp.addEventListener('keydown', (ev) => {
+          ev.stopPropagation();
+          if (ev.key === 'Enter') {
+            ev.preventDefault();
+            commitMileTitle();
+            titleInp.blur();
+          }
         });
         const del = row.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: '×' });
         del.title = 'Delete milestone';
@@ -5181,7 +5957,7 @@ class CadenceAppView extends obsidian.ItemView {
     if (!skipRender) this.render();
   }
 
-  _renderTaskSection(parent, file, tasks, flashSaved, rawKey = 'Tasks') {
+  _renderTaskSection(parent, file, tasks, flashSaved, rawKey = 'Tasks', projectMilestones = null) {
     const card = parent.createDiv({ cls: 'cad-pd-card' });
     const head = card.createDiv({ cls: 'cad-pd-card-head' });
 
@@ -5213,8 +5989,20 @@ class CadenceAppView extends obsidian.ItemView {
             const taskObj = fileTaskNotes[idx];
             await toggleTaskNotesTask(this.app, taskObj.file, cb.checked);
           } else {
+            const oldItem = Object.assign({}, items[idx]);
             items[idx].done = cb.checked;
+            if (cb.checked) {
+              const todayStr = ymd(new Date());
+              if (!items[idx].title.match(/(?:\[completion::\s*|✅\s*)(\d{4}-\d{2}-\d{2})/i)) {
+                items[idx].title = `${items[idx].title.trim()} ✅ ${todayStr}`;
+              }
+            } else {
+              items[idx].title = items[idx].title
+                .replace(/(?:\[completion::\s*|✅\s*)\d{4}-\d{2}-\d{2}\]?/gi, '')
+                .trim();
+            }
             await this._commitTasks(file, items, flashSaved, false, rawKey);
+            await syncProjectTaskToDailyNote(this.app, this.plugin.settings, file, items[idx], oldItem);
             const txt = (items[idx].title || '').trim();
             if (txt) await this._propagateTaskComplete(txt, cb.checked, { kind: 'project', file });
           }
@@ -5233,31 +6021,128 @@ class CadenceAppView extends obsidian.ItemView {
           });
         } else {
           const titleInp = row.createEl('input', { type: 'text', cls: 'cad-pd-task-title' });
-          titleInp.value = t.title || '';
+          titleInp.value = cleanTaskDisplayTitle(t.title);
           titleInp.placeholder = 'Task description';
+
+          if (this._focusTaskIdx === idx) {
+            this._focusTaskIdx = null;
+            setTimeout(() => {
+              titleInp.focus();
+            }, 30);
+          }
+
+          /* Milestone dropdown selector */
+          const msSelect = row.createEl('select', { cls: 'cad-pd-task-milestone-select' });
+          const currentMs = parseTaskMilestone(t.title) || '';
+          if (currentMs) msSelect.addClass('active');
+
+          const defaultOpt = msSelect.createEl('option', { value: '', text: '🎯 Milestone' });
+          if (!currentMs) defaultOpt.selected = true;
+
+          const validMilestones = (projectMilestones || []).filter(m => m && (m.title || '').trim());
+          validMilestones.forEach(m => {
+            const opt = msSelect.createEl('option', { value: m.title.trim(), text: `🎯 ${m.title.trim()}` });
+            if (currentMs.toLowerCase() === m.title.trim().toLowerCase()) {
+              opt.selected = true;
+            }
+          });
+
+          msSelect.title = currentMs ? `Milestone: ${currentMs}` : 'Associate task to a milestone';
+
+          msSelect.addEventListener('change', async () => {
+            const selectedMs = msSelect.value;
+            items[idx].milestone = selectedMs || null;
+            const baseTitle = cleanTaskDisplayTitle(items[idx].title || titleInp.value);
+            const currentDate = parseTaskDate(items[idx].title);
+            const projectLinks = extractProjectLinks(items[idx].title);
+
+            let newTitle = baseTitle;
+            if (projectLinks.length) newTitle += ' ' + projectLinks.map(p => `[[${p}]]`).join(' ');
+            if (selectedMs) newTitle = setTaskMilestone(newTitle, selectedMs);
+            if (currentDate) newTitle = setTaskDateInTitle(newTitle, currentDate);
+
+            items[idx].title = newTitle;
+            if (selectedMs) {
+              msSelect.addClass('active');
+              msSelect.title = `Milestone: ${selectedMs}`;
+            } else {
+              msSelect.removeClass('active');
+              msSelect.title = 'Associate task to a milestone';
+            }
+
+            await this._commitTasks(file, items, flashSaved, false, rawKey);
+          });
+
+          const commitValue = async () => {
+            clearTimeout(tt);
+            const cleanInput = cleanTaskDisplayTitle(titleInp.value);
+            const currentMilestone = msSelect.value || (items[idx].milestone || parseTaskMilestone(items[idx].title));
+            const currentDate = parseTaskDate(items[idx].title);
+            const projectLinks = extractProjectLinks(items[idx].title);
+
+            let fullTitle = cleanInput;
+            if (projectLinks.length) fullTitle += ' ' + projectLinks.map(p => `[[${p}]]`).join(' ');
+            if (currentMilestone) fullTitle = setTaskMilestone(fullTitle, currentMilestone);
+            if (currentDate) fullTitle = setTaskDateInTitle(fullTitle, currentDate);
+
+            if (items[idx] && items[idx].title !== fullTitle) {
+              const oldTitle = items[idx].title;
+              items[idx].title = fullTitle;
+              await this._commitTasks(file, items, flashSaved, true, rawKey);
+
+              const oldClean = cleanTaskDisplayTitle(oldTitle);
+              const newClean = cleanInput;
+              if (oldClean && newClean && oldClean !== newClean) {
+                const linked = findProjectTaskReminder(this.plugin, file.path, oldClean);
+                if (linked) {
+                  await this.plugin.updateReminder(linked.id, { text: newClean });
+                }
+              }
+            }
+          };
+
           let tt;
           titleInp.addEventListener('input', () => {
             clearTimeout(tt);
-            tt = setTimeout(async () => {
-              items[idx].title = titleInp.value;
-              await this._commitTasks(file, items, flashSaved, true, rawKey);
-            }, 400);
+            tt = setTimeout(commitValue, 400);
+          });
+
+          titleInp.addEventListener('blur', commitValue);
+
+          titleInp.addEventListener('keydown', async (ev) => {
+            ev.stopPropagation();
+            if (ev.key === 'Enter') {
+              ev.preventDefault();
+              await commitValue();
+              tasks.push({ done: false, title: '' });
+              this._focusTaskIdx = tasks.length - 1;
+              await this._commitTasks(file, tasks, flashSaved, false, rawKey);
+            } else if (ev.key === 'Escape') {
+              titleInp.blur();
+            }
+          });
+
+          row.addEventListener('click', (ev) => {
+            if (ev.target === row) {
+              titleInp.focus();
+            }
           });
 
           /* Bell — set or edit a reminder linked to this task. */
-          const linked = findProjectTaskReminder(this.plugin, file.path, t.title || '');
+          const cleanText = cleanTaskDisplayTitle(t.title || '');
+          const linked = findProjectTaskReminder(this.plugin, file.path, cleanText || t.title || '');
+          const hasSchedule = linked && linked.when;
           const bell = row.createEl('button', {
-            cls: 'cad-btn cad-btn-sm cad-pd-task-bell' + (linked ? ' linked' : ''),
-            text: linked ? '🔔' : '🔕',
+            cls: 'cad-btn cad-btn-sm cad-pd-task-bell' + (hasSchedule ? ' linked' : ''),
+            text: hasSchedule ? '🔔' : '🔕',
           });
-          bell.title = linked
-            ? `Edit reminder${linked.when ? ' · ' + reminderTimeStr(linked.when) : ''}`
-            : 'Set a reminder for this task';
+          bell.title = hasSchedule
+            ? `Scheduled: ${reminderTimeStr(linked.when)}`
+            : 'Set date & reminder for this task';
           bell.addEventListener('click', async () => {
-            items[idx].title = titleInp.value;
-            await this._commitTasks(file, items, flashSaved, true, rawKey);
+            await commitValue();
 
-            const taskText = titleInp.value.trim();
+            const taskText = cleanTaskDisplayTitle(titleInp.value);
             if (!taskText) {
               new obsidian.Notice('Add a task title first.');
               titleInp.focus();
@@ -5280,9 +6165,23 @@ class CadenceAppView extends obsidian.ItemView {
 
         if (this.plugin.settings.taskManagementSystem !== 'tasknotes') {
           const del = row.createEl('button', { cls: 'cad-btn cad-btn-sm cad-btn-danger', text: '×' });
+          del.title = 'Delete task';
           del.addEventListener('click', async () => {
+            const oldItem = Object.assign({}, items[idx]);
             items.splice(idx, 1);
             await this._commitTasks(file, items, flashSaved, false, rawKey);
+            if (oldItem && oldItem.title) {
+              const cleanT = cleanTaskDisplayTitle(oldItem.title);
+              const linked = findProjectTaskReminder(this.plugin, file.path, cleanT);
+              if (linked) {
+                await this.plugin.deleteReminder(linked.id);
+              } else {
+                const oldDate = parseTaskDate(oldItem.title);
+                if (oldDate && cleanT) {
+                  await removeTaskFromDailyNote(this.app, this.plugin.settings, oldDate, cleanT, file.basename);
+                }
+              }
+            }
           });
         }
       });
@@ -5331,6 +6230,7 @@ priority: normal
         return;
       }
       tasks.push({ done: false, title: '' });
+      this._focusTaskIdx = tasks.length - 1;
       await this._commitTasks(file, tasks, flashSaved, false, rawKey);
     });
   }
@@ -5338,10 +6238,14 @@ priority: normal
   async _commitTasks(file, items, flashSaved, skipRender = false, rawKey = 'Tasks') {
     const body = stringifyTasks(items);
     const content = await this.app.vault.read(file);
-    const next = replaceSection(content, `## ${rawKey}`, body || '');
+    let next = replaceSection(content, `## ${rawKey}`, body || '');
+    const syncRes = syncMilestonesWithTasks(next, items);
+    if (syncRes.changed) {
+      next = syncRes.content;
+    }
     await this.app.vault.modify(file, next);
     if (typeof flashSaved === 'function') flashSaved();
-    if (!skipRender) this.render();
+    if (!skipRender || syncRes.changed) this.render();
   }
 
   _renderMarkdownTextCard(parent, file, sectionKey, label, initialValue, placeholder, flashSaved) {
@@ -5349,27 +6253,97 @@ priority: normal
     const head = card.createDiv({ cls: 'cad-pd-card-head' });
     head.createDiv({ cls: 'cad-pd-card-title', text: label });
 
-    const openBtn = head.createEl('button', { cls: 'cad-btn cad-btn-sm', attr: { style: 'margin-left: auto; padding: 4px 6px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px solid var(--border-color); background: transparent; cursor: pointer;' } });
-    openBtn.title = 'Open this note natively to edit with full Live Preview & Autocomplete';
+    const btnGroup = head.createDiv({ attr: { style: 'margin-left: auto; display: flex; align-items: center; gap: 6px;' } });
+
+    // Mode Toggle Button (Edit / Preview)
+    const toggleBtn = btnGroup.createEl('button', {
+      cls: 'cad-btn cad-btn-sm',
+      attr: { style: 'padding: 4px 8px; display: inline-flex; align-items: center; gap: 4px; border-radius: 4px; border: 1px solid var(--border-color); background: transparent; cursor: pointer; font-size: 11px; color: var(--text-muted);' }
+    });
+
+    const openBtn = btnGroup.createEl('button', {
+      cls: 'cad-btn cad-btn-sm',
+      attr: { style: 'padding: 4px 6px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px solid var(--border-color); background: transparent; cursor: pointer;' }
+    });
+    openBtn.title = 'Open this note natively in a split tab';
     try { obsidian.setIcon(openBtn, 'file-text'); } catch (_) { }
     openBtn.addEventListener('click', (ev) => {
       ev.stopPropagation();
       this.app.workspace.openLinkText(file.path, '', 'split');
     });
 
-    const body = card.createDiv({ attr: { style: 'padding: 12px; min-height: 40px; position: relative;' } });
+    const body = card.createDiv({ attr: { style: 'position: relative; min-height: 80px;' } });
 
-    // Preview container
-    const previewDiv = body.createDiv({ cls: 'markdown-preview-view', attr: { style: 'padding: 0; min-height: 30px;' } });
+    // Helper to detect default template placeholder text
+    const isPlaceholderText = (val) => {
+      if (!val) return true;
+      const t = val.trim();
+      return (
+        t === '_Enter your notes here..._' ||
+        t === 'Enter your notes here...' ||
+        t === '_Company description and profile..._' ||
+        t === '_Background, interests, and how we met..._' ||
+        t === '_Context and general notes..._' ||
+        t === '_The outcome we want to achieve..._'
+      );
+    };
 
-    // Render the initial markdown preview
+    let currentValue = isPlaceholderText(initialValue) ? '' : (initialValue || '');
+    let isEditing = !currentValue.trim();
+
+    // 1. Textarea element
+    const ta = body.createEl('textarea', { cls: 'cad-pd-textarea' });
+    ta.placeholder = placeholder || `Enter your ${label.toLowerCase()} here...`;
+    ta.value = currentValue;
+
+    // 2. Preview element
+    const previewWrap = body.createDiv({
+      cls: 'cad-card-preview-wrap',
+      attr: { style: 'padding: 12px 14px; min-height: 60px; cursor: pointer;' }
+    });
+    previewWrap.title = 'Click to edit';
+    const previewDiv = previewWrap.createDiv({ cls: 'markdown-preview-view', attr: { style: 'padding: 0; min-height: 30px;' } });
+
+    let saveTimer = null;
+    const commitValue = async (val) => {
+      currentValue = val;
+      let content = '';
+      try { content = await this.app.vault.read(file); } catch (_) { return; }
+      const nextContent = replaceSection(content, `## ${sectionKey}`, val);
+      await this.app.vault.modify(file, nextContent);
+      if (typeof flashSaved === 'function') flashSaved();
+    };
+
+    const autoResize = () => {
+      ta.style.height = 'auto';
+      ta.style.height = Math.max(80, ta.scrollHeight) + 'px';
+    };
+
+    ta.addEventListener('input', () => {
+      autoResize();
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        commitValue(ta.value);
+      }, 500);
+    });
+
+    ta.addEventListener('blur', () => {
+      if (saveTimer) clearTimeout(saveTimer);
+      commitValue(ta.value);
+    });
+
     const renderPreview = () => {
       previewDiv.empty();
-      const rawText = initialValue || '';
+      const rawText = currentValue || '';
+      if (!rawText.trim()) {
+        previewDiv.createDiv({
+          text: placeholder || `Click to enter ${label.toLowerCase()}...`,
+          attr: { style: 'color: var(--text-faint); font-style: italic; font-size: 0.95em; padding: 4px 0;' }
+        });
+        return;
+      }
       try {
         obsidian.MarkdownRenderer.renderMarkdown(rawText, previewDiv, file.path, this);
-
-        // Find all standard Obsidian [[...]] internal links and bind open handlers!
         previewDiv.querySelectorAll('a.internal-link').forEach(a => {
           const href = a.getAttribute('data-href') || a.getAttribute('href');
           if (href) {
@@ -5383,12 +6357,57 @@ priority: normal
       } catch (e) {
         previewDiv.setText(rawText);
       }
-      // Add subtle placeholder if empty
-      if (!rawText.trim()) {
-        const ph = previewDiv.createDiv({ text: placeholder || 'Empty section.', attr: { style: 'color: var(--text-faint); font-style: italic; font-size: 0.9em; padding: 4px 0;' } });
+    };
+
+    const updateView = () => {
+      if (isEditing) {
+        previewWrap.style.display = 'none';
+        ta.style.display = 'block';
+        toggleBtn.empty();
+        try { obsidian.setIcon(toggleBtn, 'eye'); } catch (_) { }
+        toggleBtn.createSpan({ text: ' Preview', attr: { style: 'margin-left: 2px;' } });
+        toggleBtn.title = 'Preview rendered markdown';
+        autoResize();
+      } else {
+        renderPreview();
+        ta.style.display = 'none';
+        previewWrap.style.display = 'block';
+        toggleBtn.empty();
+        try { obsidian.setIcon(toggleBtn, 'edit-3'); } catch (_) { }
+        toggleBtn.createSpan({ text: ' Edit', attr: { style: 'margin-left: 2px;' } });
+        toggleBtn.title = 'Edit notes';
       }
     };
-    renderPreview();
+
+    toggleBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      if (isEditing) {
+        commitValue(ta.value);
+        isEditing = false;
+        updateView();
+      } else {
+        isEditing = true;
+        updateView();
+        setTimeout(() => {
+          ta.focus();
+          autoResize();
+        }, 10);
+      }
+    });
+
+    previewWrap.addEventListener('click', (ev) => {
+      if (ev.target && (ev.target.tagName === 'A' || ev.target.closest('a'))) {
+        return;
+      }
+      isEditing = true;
+      updateView();
+      setTimeout(() => {
+        ta.focus();
+        autoResize();
+      }, 10);
+    });
+
+    updateView();
   }
 
   _renderProjectTextSection(parent, file, sections, def, flashSaved) {
@@ -5664,16 +6683,26 @@ priority: normal
     }
   }
 
-  _renderDynamicH2Section(parent, file, sections, rawKey, flashSaved) {
+  _renderDynamicH2Section(parent, file, sections, rawKey, flashSaved, projectMilestones = null) {
     const { cleanLabel, tag } = parseHeaderKey(rawKey);
     const cleanLower = cleanLabel.toLowerCase();
 
     if (tag === '#tasks' || cleanLower === 'tasks') {
       const taskList = parseTasksList(sections[rawKey] || '');
-      this._renderTaskSection(parent, file, taskList, flashSaved, rawKey);
+      let milestones = projectMilestones;
+      if (!milestones) {
+        for (const [k, v] of Object.entries(sections || {})) {
+          const pk = parseHeaderKey(k);
+          if (pk.tag === '#milestones' || pk.cleanLabel.toLowerCase() === 'milestones') {
+            milestones = parseMilestones(v);
+            break;
+          }
+        }
+      }
+      this._renderTaskSection(parent, file, taskList, flashSaved, rawKey, milestones);
     } else if (tag === '#milestones' || cleanLower === 'milestones') {
       const milestoneList = parseMilestones(sections[rawKey] || '');
-      this._renderMilestoneSection(parent, file, milestoneList, flashSaved, rawKey);
+      this._renderMilestoneSection(parent, file, milestoneList, flashSaved, rawKey, sections);
     } else if (tag.startsWith('#cross-')) {
       const crossParts = tag.slice('#cross-'.length).split('-');
       if (crossParts.length === 3) {
@@ -6183,6 +7212,429 @@ priority: normal
     return "Here's what's on your radar.";
   }
 
+  /* ── Activity Heatmap & Daily Streak ── */
+  async _renderActivityHeatmapCard(parent) {
+    const settings = this.plugin.settings;
+    const currentRange = settings.heatmapRange || '1y';
+    const rangeConfig = { '3m': 13, '6m': 26, '1y': 52 };
+    const numWeeks = rangeConfig[currentRange] || 52;
+
+    const card = parent.createDiv({ cls: 'cad-home-card cad-heatmap-card' });
+    card.dataset.tone = 'emerald';
+
+    const head = card.createDiv({ cls: 'cad-home-card-head' });
+    head.createDiv({ cls: 'cad-home-card-title', text: '🔥 DAILY STREAK & ACTIVITY' });
+
+    const headActions = head.createDiv({ cls: 'cad-heatmap-head-actions' });
+    const rangeGroup = headActions.createDiv({ cls: 'cad-btn-group cad-heatmap-range-group' });
+
+    const ranges = [
+      { id: '3m', label: '3 Months' },
+      { id: '6m', label: '6 Months' },
+      { id: '1y', label: '1 Year' },
+    ];
+
+    ranges.forEach((r) => {
+      const btn = rangeGroup.createEl('button', {
+        cls: 'cad-heatmap-range-btn' + (currentRange === r.id ? ' active' : ''),
+        text: r.label,
+      });
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        this.plugin.settings.heatmapRange = r.id;
+        await this.plugin.saveSettings();
+        this.render();
+      });
+    });
+
+    const body = card.createDiv({ cls: 'cad-home-card-body cad-heatmap-body' });
+
+    // 1. Activity map & streak calculations
+    const activityMap = await computeDailyActivityMap(this.app, settings);
+    const today = new Date();
+    const stats = computeStreakStats(activityMap, today);
+
+    // 2. Metrics Bar
+    const statsRow = body.createDiv({ cls: 'cad-streak-stats-row' });
+    const mkStat = (icon, val, label, sub) => {
+      const item = statsRow.createDiv({ cls: 'cad-streak-stat-item' });
+      item.createSpan({ cls: 'cad-streak-stat-icon', text: icon });
+      const info = item.createDiv({ cls: 'cad-streak-stat-info' });
+      info.createDiv({ cls: 'cad-streak-stat-val', text: String(val) });
+      info.createDiv({ cls: 'cad-streak-stat-label', text: label });
+      if (sub) info.createDiv({ cls: 'cad-streak-stat-sub', text: sub });
+    };
+
+    const isTodayActive = (activityMap[ymd(today)]?.total || 0) > 0;
+    mkStat('🔥', `${stats.currentStreak} ${stats.currentStreak === 1 ? 'Day' : 'Days'}`, 'Current Streak', isTodayActive ? 'Active today ✓' : 'Complete work today!');
+    mkStat('⚡', `${stats.longestStreak} ${stats.longestStreak === 1 ? 'Day' : 'Days'}`, 'Longest Streak', 'Personal record');
+    mkStat('📅', `${stats.totalActiveDays} ${stats.totalActiveDays === 1 ? 'Day' : 'Days'}`, 'Active Days', 'Total days logged');
+    mkStat('✅', `${stats.totalTasks} ${stats.totalTasks === 1 ? 'Task' : 'Tasks'}`, 'Tasks Done', 'Completed across notes');
+
+    // 3. Heatmap Scrollable Wrapper
+    const heatScroll = body.createDiv({ cls: 'cad-heatmap-scroll' });
+    const heatWrap = heatScroll.createDiv({ cls: 'cad-heatmap-container' });
+
+    // Day labels (Mon, Wed, Fri) on the left
+    const dayLabelsCol = heatWrap.createDiv({ cls: 'cad-heatmap-day-labels' });
+    dayLabelsCol.createDiv({ cls: 'cad-heatmap-day-label', text: 'Mon' });
+    dayLabelsCol.createDiv({ cls: 'cad-heatmap-day-label spacer' });
+    dayLabelsCol.createDiv({ cls: 'cad-heatmap-day-label', text: 'Wed' });
+    dayLabelsCol.createDiv({ cls: 'cad-heatmap-day-label spacer' });
+    dayLabelsCol.createDiv({ cls: 'cad-heatmap-day-label', text: 'Fri' });
+    dayLabelsCol.createDiv({ cls: 'cad-heatmap-day-label spacer' });
+    dayLabelsCol.createDiv({ cls: 'cad-heatmap-day-label spacer' });
+
+    // Grid Area: months row on top + days grid
+    const gridArea = heatWrap.createDiv({ cls: 'cad-heatmap-grid-area' });
+    const monthsRow = gridArea.createDiv({ cls: 'cad-heatmap-months-row' });
+    const daysGrid = gridArea.createDiv({ cls: 'cad-heatmap-days-grid' });
+
+    const { weeks } = generateHeatmapGrid(today, numWeeks, 1);
+
+    let lastMonth = -1;
+    weeks.forEach((week, wIdx) => {
+      const firstDay = week[0];
+      const m = firstDay.getMonth();
+      const monthCell = monthsRow.createDiv({ cls: 'cad-heatmap-month-cell' });
+      if (m !== lastMonth && (wIdx === 0 || firstDay.getDate() <= 7)) {
+        monthCell.setText(firstDay.toLocaleDateString(undefined, { month: 'short' }));
+        lastMonth = m;
+      }
+
+      const col = daysGrid.createDiv({ cls: 'cad-heatmap-week-col' });
+      week.forEach((dayDate) => {
+        const dStr = ymd(dayDate);
+        const data = activityMap[dStr] || { tasks: 0, notes: 0, total: 0 };
+        const total = data.total;
+
+        let level = 0;
+        if (total >= 9) level = 4;
+        else if (total >= 6) level = 3;
+        else if (total >= 3) level = 2;
+        else if (total >= 1) level = 1;
+
+        const cell = col.createDiv({ cls: 'cad-heatmap-cell' });
+        cell.dataset.level = String(level);
+        cell.dataset.date = dStr;
+
+        if (sameDay(dayDate, today)) {
+          cell.addClass('is-today');
+        }
+
+        const formattedDate = dayDate.toLocaleDateString(undefined, {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        });
+        const tooltipText = `${formattedDate}\n${total} ${total === 1 ? 'activity' : 'activities'} (${data.tasks} tasks, ${data.notes} notes)`;
+
+        try {
+          obsidian.setTooltip(cell, tooltipText);
+        } catch (_) {
+          cell.title = tooltipText;
+        }
+
+        cell.addEventListener('click', async (ev) => {
+          ev.stopPropagation();
+          const targetObj = new Date(dStr + 'T12:00:00');
+          const dFile = await ensureDailyNote(this.app, this.plugin.settings, targetObj);
+          if (dFile) {
+            this.app.workspace.openLinkText(dFile.path, '', false);
+          }
+        });
+      });
+    });
+
+    // 4. Footer with Hint and Legend
+    const foot = body.createDiv({ cls: 'cad-heatmap-footer' });
+    foot.createDiv({ cls: 'cad-heatmap-hint', text: '💡 Click any square to open or create that day’s daily note' });
+
+    const legend = foot.createDiv({ cls: 'cad-heatmap-legend' });
+    legend.createSpan({ cls: 'cad-heatmap-legend-label', text: 'Less' });
+    for (let l = 0; l <= 4; l++) {
+      const swatch = legend.createDiv({ cls: 'cad-heatmap-cell' });
+      swatch.dataset.level = String(l);
+    }
+    legend.createSpan({ cls: 'cad-heatmap-legend-label', text: 'More' });
+  }
+
+  /* ── Project Task Completion Line Chart ── */
+  async _renderProjectTaskLineChartCard(parent) {
+    const settings = this.plugin.settings;
+    const currentRange = settings.projectLineChartRange || '14d';
+    const rangeConfig = { '7d': 7, '14d': 14, '30d': 30, '90d': 90 };
+    const numDays = rangeConfig[currentRange] || 14;
+
+    const card = parent.createDiv({ cls: 'cad-home-card cad-heatmap-card cad-linechart-card' });
+    card.dataset.tone = 'sky';
+
+    const head = card.createDiv({ cls: 'cad-home-card-head' });
+    head.createDiv({ cls: 'cad-home-card-title', text: '📈 TASKS COMPLETED BY PROJECT' });
+
+    const headActions = head.createDiv({ cls: 'cad-heatmap-head-actions' });
+    const rangeGroup = headActions.createDiv({ cls: 'cad-btn-group cad-heatmap-range-group' });
+
+    const ranges = [
+      { id: '7d', label: '7 Days' },
+      { id: '14d', label: '14 Days' },
+      { id: '30d', label: '30 Days' },
+      { id: '90d', label: '90 Days' },
+    ];
+
+    ranges.forEach((r) => {
+      const btn = rangeGroup.createEl('button', {
+        cls: 'cad-heatmap-range-btn' + (currentRange === r.id ? ' active' : ''),
+        text: r.label,
+      });
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        this.plugin.settings.projectLineChartRange = r.id;
+        await this.plugin.saveSettings();
+        this.render();
+      });
+    });
+
+    const body = card.createDiv({ cls: 'cad-home-card-body cad-linechart-body' });
+
+    // Compute data
+    const chartData = await computeProjectTaskCompletionsByDate(this.app, settings, numDays);
+    const { dates, projects, maxCount, totalTasksCompleted } = chartData;
+    const activeProjects = projects.filter((p) => p.total > 0);
+
+    // Empty state if no tasks done
+    if (totalTasksCompleted === 0 || activeProjects.length === 0) {
+      const emptyWrap = body.createDiv({ cls: 'cad-linechart-empty' });
+      emptyWrap.createDiv({ cls: 'cad-linechart-empty-icon', text: '📊' });
+      emptyWrap.createDiv({
+        cls: 'cad-linechart-empty-title',
+        text: `No completed project tasks in the last ${numDays} days`
+      });
+      emptyWrap.createDiv({
+        cls: 'cad-linechart-empty-sub',
+        text: 'Check off tasks linked to projects in your daily notes or project checklists to see your completion trend over time.'
+      });
+      return;
+    }
+
+    // Top Summary & Legend Bar
+    const legendWrap = body.createDiv({ cls: 'cad-linechart-legend' });
+
+    // "All" pill
+    const allPill = legendWrap.createDiv({ cls: 'cad-linechart-legend-item active all-pill' });
+    allPill.createSpan({ cls: 'cad-linechart-legend-dot', attr: { style: 'background: var(--text-normal);' } });
+    allPill.createSpan({ cls: 'cad-linechart-legend-name', text: 'All Projects' });
+    allPill.createSpan({ cls: 'cad-linechart-legend-badge', text: `${totalTasksCompleted} done` });
+
+    let activeFilterProject = null;
+
+    const projectPills = [];
+    activeProjects.forEach((proj) => {
+      const item = legendWrap.createDiv({ cls: 'cad-linechart-legend-item active' });
+      item.createSpan({ cls: 'cad-linechart-legend-dot', attr: { style: `background: ${proj.color}; box-shadow: 0 0 6px ${proj.color}80;` } });
+      item.createSpan({ cls: 'cad-linechart-legend-name', text: proj.name });
+      item.createSpan({ cls: 'cad-linechart-legend-badge', text: `${proj.total}` });
+      projectPills.push({ proj, el: item });
+
+      item.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (activeFilterProject === proj.name) {
+          activeFilterProject = null;
+        } else {
+          activeFilterProject = proj.name;
+        }
+        updateHighlight();
+      });
+    });
+
+    allPill.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      activeFilterProject = null;
+      updateHighlight();
+    });
+
+    // SVG Line Chart
+    const svgWrap = body.createDiv({ cls: 'cad-linechart-svg-wrap' });
+    const vbWidth = 840;
+    const vbHeight = 220;
+    const paddingLeft = 46;
+    const paddingRight = 24;
+    const paddingTop = 20;
+    const paddingBottom = 34;
+
+    const plotWidth = vbWidth - paddingLeft - paddingRight;
+    const plotHeight = vbHeight - paddingTop - paddingBottom;
+
+    // Y Axis scaling
+    const yMax = Math.max(3, Math.ceil(maxCount * 1.15));
+    const ySteps = yMax <= 4 ? yMax : (yMax <= 8 ? 4 : 5);
+
+    const svg = svgWrap.createSvg('svg', {
+      attr: {
+        viewBox: `0 0 ${vbWidth} ${vbHeight}`,
+        width: '100%',
+        height: '220',
+        class: 'cad-linechart-svg',
+      }
+    });
+
+    // Draw horizontal grid lines & Y labels
+    for (let s = 0; s <= ySteps; s++) {
+      const val = Math.round((s / ySteps) * yMax);
+      const y = paddingTop + plotHeight - (val / yMax) * plotHeight;
+
+      svg.createSvg('line', {
+        attr: {
+          x1: String(paddingLeft),
+          y1: String(y),
+          x2: String(vbWidth - paddingRight),
+          y2: String(y),
+          stroke: 'var(--background-modifier-border)',
+          'stroke-dasharray': s === 0 ? 'none' : '3 3',
+          'stroke-width': '1',
+          opacity: s === 0 ? '0.8' : '0.45',
+        }
+      });
+
+      const yTxt = svg.createSvg('text', {
+        attr: {
+          x: String(paddingLeft - 8),
+          y: String(y + 3.5),
+          'text-anchor': 'end',
+          'font-size': '10',
+          'font-weight': '600',
+          fill: 'var(--text-faint)',
+          class: 'cad-linechart-axis-label',
+        }
+      });
+      yTxt.setText(String(val));
+    }
+
+    // Determine X date label step
+    const xStep = numDays <= 7 ? 1 : (numDays <= 14 ? 2 : (numDays <= 30 ? 5 : 15));
+
+    dates.forEach((dStr, idx) => {
+      const x = paddingLeft + (idx / (dates.length - 1)) * plotWidth;
+      const isLast = idx === dates.length - 1;
+      const isFirst = idx === 0;
+      const isStep = (idx % xStep === 0) || isLast;
+
+      if (isStep) {
+        const dObj = new Date(dStr + 'T12:00:00');
+        const labelStr = isLast ? 'Today' : dObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+        const xTxt = svg.createSvg('text', {
+          attr: {
+            x: String(x),
+            y: String(vbHeight - 12),
+            'text-anchor': isFirst ? 'start' : (isLast ? 'end' : 'middle'),
+            'font-size': '10',
+            'font-weight': isLast ? '700' : '500',
+            fill: isLast ? 'var(--text-normal)' : 'var(--text-faint)',
+            class: 'cad-linechart-axis-label',
+          }
+        });
+        xTxt.setText(labelStr);
+      }
+    });
+
+    // Draw lines and dots per project
+    const seriesElements = [];
+
+    activeProjects.forEach((proj) => {
+      const g = svg.createSvg('g', {
+        attr: {
+          class: 'cad-linechart-series',
+          'data-project': proj.name,
+        }
+      });
+
+      const points = dates.map((dStr, idx) => {
+        const x = paddingLeft + (idx / (dates.length - 1)) * plotWidth;
+        const count = proj.countsByDate[dStr] || 0;
+        const y = paddingTop + plotHeight - (count / yMax) * plotHeight;
+        return { x, y, count, date: dStr };
+      });
+
+      const pathD = points.reduce((acc, pt, i) => {
+        return i === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`;
+      }, '');
+
+      const pathEl = g.createSvg('path', {
+        attr: {
+          d: pathD,
+          fill: 'none',
+          stroke: proj.color,
+          'stroke-width': '2.5',
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          class: 'cad-linechart-path',
+        }
+      });
+
+      const dots = [];
+      points.forEach((pt) => {
+        if (pt.count > 0) {
+          const circle = g.createSvg('circle', {
+            attr: {
+              cx: String(pt.x),
+              cy: String(pt.y),
+              r: '4.5',
+              fill: proj.color,
+              stroke: 'var(--background-primary)',
+              'stroke-width': '2',
+              class: 'cad-linechart-dot',
+            }
+          });
+
+          const dObj = new Date(pt.date + 'T12:00:00');
+          const dateFmt = dObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+          const tip = `${proj.name}\n${dateFmt}: ${pt.count} ${pt.count === 1 ? 'task' : 'tasks'} done`;
+
+          try {
+            obsidian.setTooltip(circle, tip);
+          } catch (_) {
+            circle.title = tip;
+          }
+
+          dots.push(circle);
+        }
+      });
+
+      seriesElements.push({ proj, g, pathEl, dots });
+    });
+
+    const updateHighlight = () => {
+      if (!activeFilterProject) {
+        allPill.addClass('active');
+        projectPills.forEach(({ el }) => el.addClass('active').removeClass('dimmed'));
+        seriesElements.forEach(({ g, pathEl }) => {
+          g.style.opacity = '1';
+          pathEl.setAttribute('stroke-width', '2.5');
+        });
+      } else {
+        allPill.removeClass('active');
+        projectPills.forEach(({ proj, el }) => {
+          if (proj.name === activeFilterProject) {
+            el.addClass('active').removeClass('dimmed');
+          } else {
+            el.removeClass('active').addClass('dimmed');
+          }
+        });
+        seriesElements.forEach(({ proj, g, pathEl }) => {
+          if (proj.name === activeFilterProject) {
+            g.style.opacity = '1';
+            pathEl.setAttribute('stroke-width', '3.5');
+          } else {
+            g.style.opacity = '0.15';
+            pathEl.setAttribute('stroke-width', '1.5');
+          }
+        });
+      }
+    };
+  }
+
   async _computeBriefing() {
     const items = [];
     const settings = this.plugin.settings;
@@ -6463,7 +7915,7 @@ priority: normal
           this.app.workspace.openLinkText(taskObj.file.path, '', false);
         });
       } else {
-        row.createSpan({ cls: 'cad-task-text', text });
+        row.createSpan({ cls: 'cad-task-text', text: stripProjectLinks(text) });
       }
 
       /* Project link button + chip */
@@ -7804,6 +9256,12 @@ priority: normal
       const newProj = right.createEl('button', { cls: 'cad-btn primary', text: '+ New Project' });
       newProj.addEventListener('click', () => this._createEntityFromPrompt('project'));
     });
+
+    // ─── Daily Streak & Activity Heatmap ───────────────
+    await this._renderActivityHeatmapCard(root);
+
+    // ─── Project Tasks Completion Line Chart ───────────
+    await this._renderProjectTaskLineChartCard(root);
 
     // ─── Stats strip ───────────────────────────────────
     const statusField = def.fields.find(f => f.key === 'status') || { options: ['active', 'on_hold', 'backlog', 'done', 'cancelled'] };
@@ -9628,8 +11086,17 @@ priority: normal
     if (!t) return;
     source = source || {};
 
+    const cleanT = cleanTaskDisplayTitle(t);
+    if (!cleanT) return;
+    const taskDate = parseTaskDate(t);
+    const inlineProjLinks = extractProjectLinks(t);
+
     const reminders = (this.plugin.settings.reminders || []).slice();
-    const matches = reminders.filter((r) => r.text && r.text.trim() === t);
+    const matches = reminders.filter((r) => {
+      if (!r.text) return false;
+      const rClean = cleanTaskDisplayTitle(r.text);
+      return rClean.toLowerCase() === cleanT.toLowerCase() || r.text.trim() === t;
+    });
 
     /* 1. Sync matching reminders (skip the source reminder) */
     for (const r of matches) {
@@ -9638,20 +11105,54 @@ priority: normal
       await this.plugin.updateReminder(r.id, { done: !!done });
     }
 
-    /* 2. For any matching reminder linked to a project, tick that project's task line */
+    /* 2. For any matching reminder linked to a project, or projects identified from source or text, tick project task */
     const projectsTouched = new Set();
-    for (const r of matches) {
-      if (!r.project) continue;
-      if (source.kind === 'project' && source.file && source.file.path === r.project) continue;
-      if (projectsTouched.has(r.project)) continue;
-      projectsTouched.add(r.project);
-      const file = this.app.vault.getAbstractFileByPath(r.project);
-      if (!file || !(file instanceof obsidian.TFile)) continue;
-      await this._tickProjectTaskByText(file, t, !!done);
+    if (source.kind === 'project' && source.file) {
+      projectsTouched.add(source.file.path);
     }
 
-    /* 3. Tick matching task line in relevant daily notes (today + each match's date note + source date) */
+    // Projects from inline links [[Project Name]]
+    for (const pName of inlineProjLinks) {
+      let pFile = null;
+      if (this.app.metadataCache && typeof this.app.metadataCache.getFirstLinkpathDest === 'function') {
+        pFile = this.app.metadataCache.getFirstLinkpathDest(pName, '');
+      }
+      if (!pFile) {
+        pFile = listEntityFiles(this.app, 'project').find((f) => f.basename.toLowerCase() === pName.toLowerCase());
+      }
+      if (!pFile && typeof this.app.vault.getMarkdownFiles === 'function') {
+        pFile = this.app.vault.getMarkdownFiles().find((f) => f.basename.toLowerCase() === pName.toLowerCase());
+      }
+      if (pFile && !projectsTouched.has(pFile.path)) {
+        projectsTouched.add(pFile.path);
+        await this._tickProjectTaskByText(pFile, cleanT, !!done);
+      }
+    }
+
+    // Projects from reminders
+    for (const r of matches) {
+      if (!r.project || projectsTouched.has(r.project)) continue;
+      projectsTouched.add(r.project);
+      const file = this.app.vault.getAbstractFileByPath(r.project);
+      if (file && file instanceof obsidian.TFile) {
+        await this._tickProjectTaskByText(file, cleanT, !!done);
+      }
+    }
+
+    // If source was daily and still no project identified, search all projects for a matching task
+    if (source.kind === 'daily' && projectsTouched.size === 0) {
+      const allProjects = listEntityFiles(this.app, 'project');
+      const projFiles = allProjects.length > 0
+        ? allProjects
+        : (typeof this.app.vault.getMarkdownFiles === 'function' ? this.app.vault.getMarkdownFiles() : []);
+      for (const pFile of projFiles) {
+        await this._tickProjectTaskByText(pFile, cleanT, !!done);
+      }
+    }
+
+    /* 3. Tick matching task line in relevant daily notes (today + each match's date note + task date) */
     const datesToCheck = new Set([ymd(new Date())]);
+    if (taskDate) datesToCheck.add(taskDate);
     matches.forEach((r) => {
       if (r.when) {
         const d = new Date(r.when);
@@ -9665,13 +11166,11 @@ priority: normal
     if (source.kind === 'daily' && source.date) datesToCheck.add(ymd(source.date));
     const settings = this.plugin.settings;
     for (const dateStr of datesToCheck) {
-      const path = settings.dailyNoteFolder
-        ? `${settings.dailyNoteFolder.replace(/\/$/, '')}/${dateStr}.md`
-        : `${dateStr}.md`;
+      const path = dailyNotePath(settings, new Date(dateStr + 'T12:00:00'));
       const file = this.app.vault.getAbstractFileByPath(path);
       if (!file || !(file instanceof obsidian.TFile)) continue;
       if (source.kind === 'daily' && source.file && source.file.path === file.path) continue;
-      await this._tickDailyNoteTaskByText(file, t, !!done);
+      await this._tickDailyNoteTaskByText(file, cleanT, !!done);
     }
   }
 
@@ -9679,18 +11178,40 @@ priority: normal
     let content;
     try { content = await this.app.vault.read(file); } catch (_) { return; }
     const sections = parseH2Sections(content);
-    const tasks = parseTasksList(sections['Tasks'] || '');
+    let tasksKey = 'Tasks';
+    for (const k of Object.keys(sections)) {
+      const { cleanLabel, tag } = parseHeaderKey(k);
+      if (tag === '#tasks' || cleanLabel.toLowerCase() === 'tasks') {
+        tasksKey = k;
+        break;
+      }
+    }
+    const tasks = parseTasksList(sections[tasksKey] || '');
     let changed = false;
+    const cleanTarget = cleanTaskDisplayTitle(text).toLowerCase();
     const updated = tasks.map((tk) => {
-      if (tk.title.trim() === text && !!tk.done !== !!done) {
+      const cleanTk = cleanTaskDisplayTitle(tk.title).toLowerCase();
+      if ((cleanTk === cleanTarget || tk.title.trim() === text) && !!tk.done !== !!done) {
         changed = true;
-        return Object.assign({}, tk, { done: !!done });
+        let newTitle = tk.title;
+        if (done) {
+          if (!newTitle.match(/(?:\[completion::\s*|✅\s*)(\d{4}-\d{2}-\d{2})/i)) {
+            newTitle = `${newTitle.trim()} ✅ ${ymd(new Date())}`;
+          }
+        } else {
+          newTitle = newTitle.replace(/(?:\[completion::\s*|✅\s*)\d{4}-\d{2}-\d{2}\]?/gi, '').trim();
+        }
+        return Object.assign({}, tk, { done: !!done, title: newTitle });
       }
       return tk;
     });
     if (!changed) return;
     const newSection = stringifyTasks(updated);
-    const next = replaceSection(content, '## Tasks', newSection);
+    let next = replaceSection(content, `## ${tasksKey}`, newSection);
+    const syncRes = syncMilestonesWithTasks(next, updated);
+    if (syncRes.changed) {
+      next = syncRes.content;
+    }
     await this.app.vault.modify(file, next);
   }
 
@@ -9699,9 +11220,11 @@ priority: normal
     try { content = await this.app.vault.read(file); } catch (_) { return; }
     const parsed = parseSections(content, this.plugin.settings);
     let changed = false;
+    const cleanTarget = cleanTaskDisplayTitle(text).toLowerCase();
     const updatedTasks = parsed.tasks.map((line) => {
       const lineText = line.replace(/^\s*-\s\[(x|X| )\]\s/, '').trim();
-      if (lineText !== text) return line;
+      const cleanLineText = cleanTaskDisplayTitle(lineText).toLowerCase();
+      if (cleanLineText !== cleanTarget && lineText !== text) return line;
       const isDone = / \[(x|X)\] /.test(line);
       if (isDone === !!done) return line;
       changed = true;
@@ -9711,7 +11234,7 @@ priority: normal
     });
     if (!changed) return;
     const newSection = updatedTasks.join('\n');
-    const next = replaceSection(content, this.plugin.settings.tasksHeading, newSection);
+    const next = replaceSection(content, this.plugin.settings.tasksHeading || '## Today', newSection);
     await this.app.vault.modify(file, next);
   }
 
@@ -9859,7 +11382,7 @@ priority: normal
             this.app.workspace.openLinkText(taskObj.file.path, '', false);
           });
         } else {
-          row.createSpan({ cls: 'cad-task-text', text });
+          row.createSpan({ cls: 'cad-task-text', text: stripProjectLinks(text) });
         }
 
         /* Project link — chip if linked, then a button */
@@ -10005,6 +11528,18 @@ priority: normal
       const newTasks = [...parsed.tasks, `- [ ] ${text}`];
       const newContent = replaceSection(content, this.plugin.settings.tasksHeading, newTasks.join('\n'));
       await this.app.vault.modify(this.todayFile, newContent);
+
+      const projLinks = extractProjectLinks(text);
+      if (projLinks.length > 0) {
+        const todayStr = ymd(new Date());
+        const projectFiles = listEntityFiles(this.app, 'project');
+        for (const pName of projLinks) {
+          const pFile = projectFiles.find((f) => f.basename.toLowerCase() === pName.toLowerCase());
+          if (pFile) {
+            await syncDailyNoteTaskToProject(this.app, this.plugin.settings, pFile, text, todayStr);
+          }
+        }
+      }
     }
     this.render();
   }
@@ -11420,6 +12955,33 @@ class CadencePlugin extends obsidian.Plugin {
     if (!Array.isArray(this.settings.reminders)) this.settings.reminders = [];
     this.settings.reminders.push(r);
     await this.saveSettings();
+
+    // If reminder has a date, sync to that date's daily note!
+    if (r.when) {
+      const d = new Date(r.when);
+      if (!isNaN(d.getTime())) {
+        const dStr = ymd(d);
+        let projFile = null;
+        if (r.project) {
+          projFile = this.app.vault.getAbstractFileByPath(r.project);
+        }
+        if (!projFile) {
+          const links = extractProjectLinks(r.text);
+          if (links.length > 0) {
+            projFile = listEntityFiles(this.app, 'project').find((f) => f.basename.toLowerCase() === links[0].toLowerCase());
+          }
+        }
+        const cleanTitle = stripTaskDate(stripProjectLinks(r.text)).trim();
+        if (cleanTitle) {
+          const targetProj = projFile || { basename: '' };
+          await syncProjectTaskToDailyNote(this.app, this.settings, targetProj, {
+            title: cleanTitle,
+            done: r.done,
+          }, null, dStr);
+        }
+      }
+    }
+
     this.refreshOpenViews();
     return r;
   }
@@ -11427,13 +12989,65 @@ class CadencePlugin extends obsidian.Plugin {
   async updateReminder(id, patch) {
     const i = (this.settings.reminders || []).findIndex((r) => r.id === id);
     if (i < 0) return null;
+    const oldR = Object.assign({}, this.settings.reminders[i]);
+    if (patch.done === true && !patch.completedAt && !this.settings.reminders[i].completedAt) {
+      patch.completedAt = new Date().toISOString();
+    } else if (patch.done === false) {
+      patch.completedAt = null;
+    }
     this.settings.reminders[i] = Object.assign({}, this.settings.reminders[i], patch);
+    const newR = this.settings.reminders[i];
     await this.saveSettings();
+
+    const oldD = oldR.when ? new Date(oldR.when) : null;
+    const newD = newR.when ? new Date(newR.when) : null;
+    const oldDStr = (oldD && !isNaN(oldD.getTime())) ? ymd(oldD) : null;
+    const newDStr = (newD && !isNaN(newD.getTime())) ? ymd(newD) : null;
+    const oldClean = stripTaskDate(stripProjectLinks(oldR.text || '')).trim();
+    const newClean = stripTaskDate(stripProjectLinks(newR.text || '')).trim();
+
+    let projFile = null;
+    const projPath = newR.project || oldR.project;
+    if (projPath) {
+      projFile = this.app.vault.getAbstractFileByPath(projPath);
+    }
+    if (!projFile) {
+      const links = extractProjectLinks(newR.text || oldR.text || '');
+      if (links.length > 0) {
+        projFile = listEntityFiles(this.app, 'project').find((f) => f.basename.toLowerCase() === links[0].toLowerCase());
+      }
+    }
+    const targetProj = projFile || { basename: '' };
+
+    if (oldDStr !== newDStr || oldClean !== newClean || oldR.done !== newR.done) {
+      await syncProjectTaskToDailyNote(this.app, this.settings, targetProj, {
+        title: newClean,
+        done: newR.done,
+      }, {
+        title: oldClean,
+        done: oldR.done,
+      }, newDStr, oldDStr);
+    }
+
     this.refreshOpenViews();
     return this.settings.reminders[i];
   }
 
   async deleteReminder(id) {
+    const r = (this.settings.reminders || []).find((rem) => rem.id === id);
+    if (r && r.when) {
+      const d = new Date(r.when);
+      if (!isNaN(d.getTime())) {
+        const dStr = ymd(d);
+        const cleanTitle = stripTaskDate(stripProjectLinks(r.text || '')).trim();
+        let projectName = '';
+        if (r.project) {
+          const projFile = this.app.vault.getAbstractFileByPath(r.project);
+          if (projFile) projectName = projFile.basename;
+        }
+        await removeTaskFromDailyNote(this.app, this.settings, dStr, cleanTitle, projectName);
+      }
+    }
     this.settings.reminders = (this.settings.reminders || []).filter((r) => r.id !== id);
     await this.saveSettings();
     this.refreshOpenViews();

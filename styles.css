@@ -135,6 +135,7 @@
   background: #1e1e1e;
   color: #dcddde;
   border-color: #303030;
+  cursor: text;
 }
 .cadence-app.cad-dark .cad-pd-mile-date:hover,
 .cadence-app.cad-dark .cad-pd-mile-title:hover,
@@ -146,7 +147,33 @@
 .cadence-app.cad-dark .cad-pd-task-title:focus {
   background: #262626;
   border-color: var(--interactive-accent, #5cb85c);
+  box-shadow: 0 0 0 1px var(--interactive-accent, #5cb85c);
   color: #dcddde;
+}
+
+.cadence-app.cad-dark .cad-pd-task-milestone-select {
+  background: #1e1e1e;
+  border-color: #303030;
+  color: #888888;
+}
+.cadence-app.cad-dark .cad-pd-task-milestone-select:hover {
+  background: #262626;
+  border-color: #444444;
+  color: #dcddde;
+}
+.cadence-app.cad-dark .cad-pd-task-milestone-select.active {
+  color: var(--interactive-accent, #5cb85c);
+  border-color: var(--interactive-accent, #5cb85c);
+  background: #1e251e;
+}
+
+.cadence-app.cad-dark .cad-mile-task-badge {
+  background: #2a2a2a;
+  color: #888888;
+}
+.cadence-app.cad-dark .cad-mile-task-badge.all-done {
+  background: rgba(92, 184, 92, 0.2);
+  color: #5cb85c;
 }
 
 /* Buttons (default) */
@@ -571,6 +598,482 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
 .cadence-app.cad-dark .cad-briefing-row { color: #D8D5CB; }
 .cadence-app.cad-dark .cad-briefing-row.clickable:hover { background: #262626; }
 
+/* ─────────── Activity Heatmap & Streak System ─────────── */
+.cad-heatmap-card {
+  margin: 20px 32px 0 32px;
+}
+.cad-heatmap-head-actions {
+  margin-left: auto;
+}
+.cad-heatmap-body {
+  padding: 18px 20px;
+}
+
+/* Stats Row */
+.cad-streak-stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.cad-streak-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.cad-streak-stat-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+}
+.cad-streak-stat-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.cad-streak-stat-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.cad-streak-stat-val {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-normal);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.cad-streak-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+.cad-streak-stat-sub {
+  font-size: 10px;
+  color: var(--text-faint);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Heatmap Header Segmented Controls */
+.cad-heatmap-range-group {
+  display: inline-flex;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+}
+.cad-heatmap-range-btn {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 120ms ease;
+  line-height: 1.4;
+}
+.cad-heatmap-range-btn:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+.cad-heatmap-range-btn.active {
+  background: var(--interactive-accent, #5cb85c);
+  color: var(--text-on-accent, #ffffff);
+  font-weight: 600;
+}
+.cadence-app.cad-dark .cad-heatmap-range-group,
+body.theme-dark .cadence-app .cad-heatmap-range-group {
+  background: #181b1d;
+  border-color: #303030;
+}
+.cadence-app.cad-dark .cad-heatmap-range-btn,
+body.theme-dark .cadence-app .cad-heatmap-range-btn {
+  color: #888888;
+}
+.cadence-app.cad-dark .cad-heatmap-range-btn:hover,
+body.theme-dark .cadence-app .cad-heatmap-range-btn:hover {
+  background: #25282c;
+  color: #dcddde;
+}
+.cadence-app.cad-dark .cad-heatmap-range-btn.active,
+body.theme-dark .cadence-app .cad-heatmap-range-btn.active {
+  background: var(--interactive-accent, #5cb85c);
+  color: #ffffff;
+}
+
+/* Heatmap Grid Layout - Full Width Responsive */
+.cad-heatmap-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 0 10px 0;
+}
+.cad-heatmap-container {
+  display: flex;
+  width: 100%;
+  min-width: 100%;
+  gap: 10px;
+  user-select: none;
+  align-items: stretch;
+}
+.cad-heatmap-day-labels {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2px, 0.35vw, 4px);
+  margin-top: 22px; /* Aligns with grid below months row (18px + 4px) */
+  height: 126px;
+  flex-shrink: 0;
+  width: 26px;
+  box-sizing: border-box;
+}
+.cad-heatmap-day-label {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--text-faint);
+  padding-right: 4px;
+}
+.cad-heatmap-day-label.spacer {
+  visibility: hidden;
+}
+.cad-heatmap-grid-area {
+  flex: 1 1 0;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cad-heatmap-months-row {
+  display: flex;
+  width: 100%;
+  gap: clamp(2px, 0.35vw, 4px);
+  height: 18px;
+}
+.cad-heatmap-month-cell {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: visible;
+  line-height: 18px;
+}
+.cad-heatmap-days-grid {
+  display: flex;
+  width: 100%;
+  gap: clamp(2px, 0.35vw, 4px);
+  height: 126px;
+}
+.cad-heatmap-week-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2px, 0.35vw, 4px);
+  height: 100%;
+}
+
+/* Heatmap Cells - Fixed Section Height & Adaptive Box Dimensions */
+.cad-heatmap-cell {
+  flex: 1 1 0;
+  width: 100%;
+  min-height: 0;
+  border-radius: clamp(2px, 0.3vw, 4px);
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: transform 90ms ease, box-shadow 90ms ease;
+}
+.cad-heatmap-cell:hover {
+  transform: scale(1.15);
+  z-index: 10;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+}
+.cad-heatmap-cell.is-today {
+  outline: 2px solid var(--interactive-accent, #5cb85c);
+  outline-offset: 1px;
+}
+
+@media (max-width: 650px) {
+  .cad-heatmap-container {
+    min-width: 540px;
+  }
+}
+
+/* Color Levels - Light Theme */
+.cad-heatmap-cell[data-level="0"] {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+.cad-heatmap-cell[data-level="1"] {
+  background: #9be9a8;
+}
+.cad-heatmap-cell[data-level="2"] {
+  background: #40c463;
+}
+.cad-heatmap-cell[data-level="3"] {
+  background: #30a14e;
+}
+.cad-heatmap-cell[data-level="4"] {
+  background: #216e39;
+  box-shadow: 0 0 4px rgba(33, 110, 57, 0.4);
+}
+
+/* Color Levels - Dark Theme */
+.cadence-app.cad-dark .cad-heatmap-card,
+body.theme-dark .cadence-app .cad-heatmap-card {
+  background: #1E2225;
+  border-color: #303030;
+}
+.cadence-app.cad-dark .cad-streak-stat-item,
+body.theme-dark .cadence-app .cad-streak-stat-item {
+  background: #181b1d;
+  border-color: #2a2e32;
+}
+.cadence-app.cad-dark .cad-streak-stats-row,
+body.theme-dark .cadence-app .cad-streak-stats-row {
+  border-color: #2a2e32;
+}
+.cadence-app.cad-dark .cad-heatmap-cell[data-level="0"],
+body.theme-dark .cadence-app .cad-heatmap-cell[data-level="0"] {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+.cadence-app.cad-dark .cad-heatmap-cell[data-level="1"],
+body.theme-dark .cadence-app .cad-heatmap-cell[data-level="1"] {
+  background: #0e4429;
+}
+.cadence-app.cad-dark .cad-heatmap-cell[data-level="2"],
+body.theme-dark .cadence-app .cad-heatmap-cell[data-level="2"] {
+  background: #006d32;
+}
+.cadence-app.cad-dark .cad-heatmap-cell[data-level="3"],
+body.theme-dark .cadence-app .cad-heatmap-cell[data-level="3"] {
+  background: #26a641;
+}
+.cadence-app.cad-dark .cad-heatmap-cell[data-level="4"],
+body.theme-dark .cadence-app .cad-heatmap-cell[data-level="4"] {
+  background: #39d353;
+  box-shadow: 0 0 6px rgba(57, 211, 83, 0.35);
+}
+
+/* Footer & Legend */
+.cad-heatmap-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.cad-heatmap-hint {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-style: italic;
+}
+.cad-heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.cad-heatmap-legend-label {
+  font-size: 10px;
+  color: var(--text-faint);
+  padding: 0 2px;
+}
+.cad-heatmap-legend .cad-heatmap-cell {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 11px;
+  border-radius: 2px;
+  cursor: default;
+}
+.cad-heatmap-legend .cad-heatmap-cell:hover {
+  transform: none;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 900px) {
+  .cad-heatmap-card {
+    margin: 14px 16px 0 16px;
+  }
+}
+
+/* ─────────── Project Task Completion Line Chart ─────────── */
+.cad-linechart-card {
+  margin: 20px 32px 0 32px;
+}
+.cad-linechart-body {
+  padding: 16px 20px 20px 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Legend and filter pills */
+.cad-linechart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.cad-linechart-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 120ms ease;
+  user-select: none;
+}
+.cad-linechart-legend-item:hover {
+  background: var(--background-modifier-hover);
+  border-color: var(--text-muted);
+}
+.cad-linechart-legend-item.dimmed {
+  opacity: 0.35;
+  filter: grayscale(0.6);
+}
+.cad-linechart-legend-item.active {
+  border-color: var(--interactive-accent, #5cb85c);
+}
+.cad-linechart-legend-item.all-pill {
+  font-weight: 600;
+}
+.cad-linechart-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.cad-linechart-legend-name {
+  font-weight: 500;
+  color: var(--text-normal);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cad-linechart-legend-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--background-primary);
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: var(--text-muted);
+  border: 1px solid var(--background-modifier-border);
+}
+
+/* SVG Line Chart */
+.cad-linechart-svg-wrap {
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+.cad-linechart-svg {
+  display: block;
+  overflow: visible;
+}
+.cad-linechart-series {
+  transition: opacity 160ms ease;
+}
+.cad-linechart-path {
+  transition: stroke-width 160ms ease;
+}
+.cad-linechart-dot {
+  cursor: pointer;
+  transition: r 120ms ease, stroke-width 120ms ease, filter 120ms ease;
+}
+.cad-linechart-dot:hover {
+  r: 6.5px;
+  stroke-width: 3px;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
+}
+.cad-linechart-axis-label {
+  user-select: none;
+  font-family: inherit;
+}
+
+/* Empty state */
+.cad-linechart-empty {
+  text-align: center;
+  padding: 36px 20px;
+  color: var(--text-muted);
+}
+.cad-linechart-empty-icon {
+  font-size: 32px;
+  margin-bottom: 10px;
+}
+.cad-linechart-empty-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-normal);
+  margin-bottom: 6px;
+}
+.cad-linechart-empty-sub {
+  font-size: 12px;
+  color: var(--text-faint);
+  max-width: 460px;
+  margin: 0 auto;
+  line-height: 1.4;
+}
+
+/* Dark Mode Overrides */
+.cadence-app.cad-dark .cad-linechart-card,
+body.theme-dark .cadence-app .cad-linechart-card {
+  background: #1E2225;
+  border-color: #303030;
+}
+.cadence-app.cad-dark .cad-linechart-legend-item,
+body.theme-dark .cadence-app .cad-linechart-legend-item {
+  background: #181b1d;
+  border-color: #2a2e32;
+}
+.cadence-app.cad-dark .cad-linechart-legend-item:hover,
+body.theme-dark .cadence-app .cad-linechart-legend-item:hover {
+  background: #25282c;
+  border-color: #444444;
+}
+.cadence-app.cad-dark .cad-linechart-legend-badge,
+body.theme-dark .cadence-app .cad-linechart-legend-badge {
+  background: #121416;
+  border-color: #2a2e32;
+  color: #a0a0a0;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 900px) {
+  .cad-linechart-card {
+    margin: 14px 16px 0 16px;
+  }
+}
+
 /* ─────────── Home / Command Centre ─────────── */
 .cadence-home .cad-home-cols {
   display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
@@ -803,6 +1306,54 @@ body.theme-dark .cadence-app.cad-dark .cad-btn:hover {
 }
 .cad-pd-task-row:hover .cad-pd-task-bell { opacity: 1; }
 .cad-pd-task-bell.linked { opacity: 1; color: var(--interactive-accent); }
+
+/* Milestone selector on project task row */
+.cad-pd-task-milestone-select {
+  appearance: auto;
+  background: transparent;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 3px 6px;
+  max-width: 140px;
+  cursor: pointer;
+  outline: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 120ms ease;
+}
+.cad-pd-task-milestone-select:hover {
+  background: var(--background-primary);
+  color: var(--text-normal);
+  border-color: var(--background-modifier-border-hover, var(--text-muted));
+}
+.cad-pd-task-milestone-select:focus {
+  border-color: var(--interactive-accent);
+}
+.cad-pd-task-milestone-select.active {
+  color: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+  background: var(--background-primary);
+  font-weight: 500;
+}
+
+/* Task progress badge on milestone row */
+.cad-mile-task-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--background-modifier-border);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.cad-mile-task-badge.all-done {
+  background: rgba(92, 184, 92, 0.15);
+  color: var(--interactive-accent, #5cb85c);
+}
 
 /* Project tasks section in inbox */
 .cad-pt-wrap {
@@ -1203,9 +1754,12 @@ select.cad-form-input { appearance: auto; padding-right: 28px; }
   font-size: 13px;
   color: var(--text-normal);
   font-family: inherit;
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
 }
 .cad-pd-mile-title:hover, .cad-pd-task-title:hover { background: var(--background-primary); border-color: var(--background-modifier-border); }
-.cad-pd-mile-title:focus, .cad-pd-task-title:focus { outline: none; background: var(--background-primary); border-color: var(--interactive-accent); }
+.cad-pd-mile-title:focus, .cad-pd-task-title:focus { outline: none; background: var(--background-primary); border-color: var(--interactive-accent); box-shadow: 0 0 0 1px var(--interactive-accent); }
 
 .cad-pd-mile-row .cad-btn-danger,
 .cad-pd-task-row .cad-btn-danger { opacity: 0; padding: 2px 8px; min-width: 0; }
@@ -1219,6 +1773,16 @@ select.cad-form-input { appearance: auto; padding-right: 28px; }
   background: var(--background-primary);
   font-family: inherit; font-size: 13px; line-height: 1.55;
   color: var(--text-normal); resize: vertical;
+  box-sizing: border-box;
+}
+
+.cad-card-preview-wrap {
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+.cad-card-preview-wrap:hover {
+  background: var(--background-modifier-hover);
 }
 
 /* Milestone notes — fallback */
